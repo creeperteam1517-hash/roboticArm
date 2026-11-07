@@ -10,15 +10,16 @@ import sys
 import time
 
 from arm import Arm, check_angle
-from moves import MOVES
+from moves import DELAYS, MOVES
 
+DEFAULT_DELAY = 1.0
 MIN_DELAY = 0.2
 MAX_DELAY = 10
 
 parser = argparse.ArgumentParser(description="Run a named arm move.")
 parser.add_argument("move", nargs="?", default="list",
                     help="the move's name, or 'list' to see them all")
-parser.add_argument("--delay", type=float, default=1.0,
+parser.add_argument("--delay", type=float,
                     help="seconds to wait after each step")
 args = parser.parse_args()
 
@@ -39,7 +40,8 @@ try:
 except ValueError as problem:
     sys.exit(f"{problem} Nothing moved.")
 
-if not MIN_DELAY <= args.delay <= MAX_DELAY:
+delay = args.delay if args.delay is not None else DELAYS.get(args.move, DEFAULT_DELAY)
+if not MIN_DELAY <= delay <= MAX_DELAY:
     sys.exit(f"Delay must be from {MIN_DELAY} to {MAX_DELAY} seconds. Nothing moved.")
 
 arm = Arm()
@@ -48,7 +50,7 @@ try:
     for joint, angle in steps:
         print(joint, angle)
         arm.move(joint, angle)
-        time.sleep(args.delay)
+        time.sleep(delay)
 except KeyboardInterrupt:
     print("Stopped early.")
 finally:

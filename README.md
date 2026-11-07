@@ -12,8 +12,9 @@ This is a work in progress.
 | Claw | Moved on real hardware, from 10 to 80 degrees |
 | Base | Moved on real hardware, from 8 to 170 degrees, but sometimes doesn't move |
 | Shoulder and elbow | Not tested yet |
+| Jarvis web page | Installed on the Pi, buttons tested with a fake board |
 | Smooth motion | Planned |
-| Chat front end and camera pick-and-place | Planned |
+| Connecting a chat front end, and camera pick-and-place | Planned |
 
 ## Hardware
 
@@ -58,13 +59,19 @@ The commands below run on a Windows PC, from the project folder.
    .\setup_ssh
    ```
 
-3. Copy the code to the Pi. This also installs anything missing, and doesn't move the arm:
+3. Copy the code to the Pi. This also installs anything missing and restarts the Jarvis page, and doesn't move the arm:
 
    ```bash
    .\deploy
    ```
 
 The scripts use this project's Pi name and username by default. For a different Pi, add `-PiAddress <address>` and `-PiUser <username>` to any of these commands.
+
+## Jarvis web page
+
+Jarvis is a page hosted on the Pi, with routine buttons, joint sliders and a Stop button. On a phone or computer on the same network, open `http://<pi-address>:8000`. The Pi doesn't need a monitor, and loading the page doesn't move the arm.
+
+Jarvis has no password, so anyone on your network can use it. Don't expose it to the internet.
 
 ## Usage
 
@@ -103,6 +110,7 @@ Angles outside a joint's limits are refused before anything moves. Each joint is
 | `pi/moves.py` | Named moves |
 | `pi/run_move.py` | Runs a named move on the Pi |
 | `pi/servo_test.py` | Tests one joint on the Pi |
+| `pi/jarvis_server.py`, `pi/jarvis.html`, `pi/jarvis.service` | The Jarvis web page, its server, and its background service |
 | `arm.cmd`, `test_servo.cmd`, `deploy.cmd`, `setup_ssh.cmd` | The commands you run on the PC |
 | `tools/` | The PowerShell scripts behind those commands |
 | `brain.md` | Detailed project notes and next steps |

@@ -1,0 +1,2 @@
+# Files in pi/ run on Linux, so they must keep Linux line endings on every computer.
+pi/* text eol=lf

@@ -8,7 +8,7 @@
 
 param(
     [string]$Move = "list",
-    [string]$Delay = "1",
+    [string]$Delay = "",
     [string]$PiAddress = "the-coolest-raspberry-pi.local",
     [string]$PiUser = "groot_the_builder"
 )
@@ -18,7 +18,7 @@ if ($Move -notmatch '^[A-Za-z0-9_]+$') {
     Write-Host "Move names can only use letters, numbers and underscores. Nothing moved." -ForegroundColor Yellow
     exit 1
 }
-if ($Delay -notmatch '^\d+(\.\d+)?$') {
+if ($Delay -and $Delay -notmatch '^\d+(\.\d+)?$') {
     Write-Host "Delay must be a number of seconds, like 1 or 0.5. Nothing moved." -ForegroundColor Yellow
     exit 1
 }
@@ -26,7 +26,11 @@ if ($Delay -notmatch '^\d+(\.\d+)?$') {
 if ($Move -ne "list") {
     Write-Host "Asking the Pi to run $Move. Keep fingers clear. Press Ctrl+C to stop."
 }
-ssh -t -o ConnectTimeout=10 "$PiUser@$PiAddress" "cd ~/roboticArm && python3 -u run_move.py $Move --delay $Delay"
+$Command = "cd ~/roboticArm && python3 -u run_move.py $Move"
+if ($Delay) {
+    $Command += " --delay $Delay"
+}
+ssh -t -o ConnectTimeout=10 "$PiUser@$PiAddress" $Command
 $Result = $LASTEXITCODE
 
 if ($Result -eq 255) {

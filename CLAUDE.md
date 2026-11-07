@@ -14,7 +14,7 @@ Set up this computer to control the Pi by following "USING ANOTHER COMPUTER (Win
 - If the Pi can't be reached, help me check that it's on and on the same network. If it has moved to a new location, use "MOVING THE PI TO A NEW LOCATION" in `brain.md`.
 
 ## Safety
-- Only run a command that can move the arm when I ask for that movement. That means `.\arm <move>`, `.\test_servo` and `.\deploy -Run`.
+- Only run a command that can move the arm when I ask for that movement. That means `.\arm <move>`, `.\test_servo`, `.\deploy -Run`, and the buttons and sliders on the Jarvis page.
 - Before running new code, run `.\deploy` and confirm it worked. Wait for that result before starting anything that can move the arm, because an old copy on the Pi can ignore new options and still move.
 - A script finishing without errors doesn't prove the arm moved. Ask me what I saw.
 - Don't raise the joint limits in `pi/arm.py` unless we've measured the real limits.

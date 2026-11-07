@@ -8,9 +8,28 @@ MOVES = {
         ("claw", 30),
         ("claw", 45),
     ],
+    "clap": [
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 45),
+    ],
     "wave": [
         ("base", 70),
         ("base", 110),
         ("base", 90),
     ],
+    "base_sweep": [
+        ("base", 10),
+        ("base", 170),
+        ("base", 10),
+        ("base", 170),
+    ],
+}
+
+# Seconds to wait after each step, for moves that don't use the normal 1 second.
+DELAYS = {
+    "clap": 0.5,
 }

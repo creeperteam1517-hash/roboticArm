@@ -58,7 +58,7 @@
 - Code for the Pi lives in the `pi/` folder. It gets copied to `~/roboticArm` on the Pi.
 - Run these from the project folder in a terminal on my PC.
 - First time only: `.\setup_ssh` (asks for the Pi password once).
-- Every time: `.\deploy` copies the files and installs missing packages. It doesn't move the arm.
+- Every time: `.\deploy` copies the files, installs missing packages and restarts the Jarvis page. It doesn't move the arm.
 - To also run a script: `.\deploy -Run servo_test.py`. This can move the arm. Check polarity first.
 - If the name doesn't work, add `-PiAddress <the Pi's IP>` to either command.
 - Tested on the real Pi on 2026-11-06, at 10.0.0.171 on my home Wi-Fi. That address could change. If so, get the new one with `hostname -I` on the Pi.
@@ -91,12 +91,20 @@ Run from my PC, without copying files first. This can move the arm:
 
 Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed, run `.\deploy` first.
 
+## JARVIS WEB PAGE
+- Open http://10.0.0.171:8000 in a browser on the same network. No monitor is needed on the Pi. The `the-coolest-raspberry-pi.local` name also works at port 8000 when the name is working.
+- It has routine buttons, a slider for each joint, and a Stop button. Loading the page never moves the arm. Shoulder and elbow stay locked until I unlock them.
+- A slider holds its position for 10 seconds, then relaxes. Stop cancels the move and relaxes all servos, so a raised arm may drop.
+- Files: pi/jarvis_server.py, pi/jarvis.html, pi/jarvis.service. It runs as a user service on the Pi, so `.\deploy` copies and restarts it without a password. It's set to start when the Pi turns on, but that hasn't been tested with a restart yet.
+- It has no password, so anyone on the Wi-Fi can use it. Keep it off the public internet. It refuses commands sent from other websites.
+- This is separate from the older Jarvis chat page on claude.ai, which isn't connected to it yet.
+
 ## NAMED MOVES
 - pi/arm.py is the shared code that moves joints and enforces the limits. Every script should use it.
 - pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
 - `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
 - `.\arm claw_wiggle` moved the real claw on 2026-11-06.
-- Moves so far are `claw_wiggle` and `wave` (base). Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
+- Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base). Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.
@@ -105,6 +113,6 @@ The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in t
 1. Confirm polarity with the meter.
 2. Test the other servos one at a time (base ch1, shoulder ch2, elbow ch3) with `.\test_servo -Joint base` and so on. Measure the real joint limits.
 3. Add smooth motion and moves for all four joints to pi/arm.py and pi/moves.py (limits are done). The old Arduino protocol was B/C/E/H<angle> (base/claw/elbow/shoulder), V<ms per degree>, S (stop), X (release).
-4. Add a small local server on the Pi so Jarvis can send commands. The hosted claude.ai page can't use USB or Web Serial, so it needs a local web page or network API.
+4. Connect the older Jarvis chat page to the Jarvis server on the Pi, if I still want that. The Jarvis web page on the Pi already works for button and slider control.
 5. Add the camera and vision-guided pick-and-place.
 6. Later: redesign the printed plinth for the new hardware.

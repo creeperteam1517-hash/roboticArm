@@ -27,7 +27,7 @@ if ($Run -and -not (Test-Path (Join-Path $LocalDir $Run) -PathType Leaf)) {
 }
 
 # Step 1: make sure the Pi can be reached.
-Write-Host "Step 1 of 3: Looking for the Pi at $PiAddress..."
+Write-Host "Step 1 of 4: Looking for the Pi at $PiAddress..."
 ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o $HostKeyOption $Target "mkdir -p ~/$RemoteDir" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -39,7 +39,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Step 2: copy the files.
-Write-Host "Step 2 of 3: Copying files..."
+Write-Host "Step 2 of 4: Copying files..."
 $Items = @(Get-ChildItem $LocalDir | Where-Object { $_.Name -ne "__pycache__" } | ForEach-Object { $_.FullName })
 scp -q -r -o ConnectTimeout=10 $Items "${Target}:$RemoteDir/"
 if ($LASTEXITCODE -ne 0) {
@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Step 3: install anything missing. Packages already installed are skipped.
-Write-Host "Step 3 of 3: Checking the Pi has what it needs..."
+Write-Host "Step 3 of 4: Checking the Pi has what it needs..."
 foreach ($Package in $Packages) {
     ssh -n $Target "dpkg -s $Package >/dev/null 2>&1"
     if ($LASTEXITCODE -ne 0) {
@@ -60,7 +60,17 @@ foreach ($Package in $Packages) {
     }
 }
 
+# Step 4: start Jarvis with the new code. It also starts by itself when the Pi turns on.
+# Restarting relaxes the servos, but starting Jarvis never moves the arm.
+Write-Host "Step 4 of 4: Restarting the Jarvis page..."
+ssh -n $Target "mkdir -p ~/.config/systemd/user && cp ~/$RemoteDir/jarvis.service ~/.config/systemd/user/jarvis.service && systemctl --user daemon-reload && systemctl --user enable --quiet jarvis && loginctl enable-linger && systemctl --user restart jarvis && sleep 2 && systemctl --user is-active --quiet jarvis"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Your files were copied, but Jarvis didn't start. Nothing moved. Share this message with Claude." -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "Deployed! Your files are in ~/$RemoteDir on the Pi." -ForegroundColor Green
+Write-Host "Jarvis is at http://${PiAddress}:8000" -ForegroundColor Green
 
 if ($Run) {
     Write-Host ""
