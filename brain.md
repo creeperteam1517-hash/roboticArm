@@ -43,12 +43,22 @@
 - Old servos may have been stressed by the earlier reverse-polarity incident, so test each one.
 
 ## CURRENT BLOCKER
-- servo_test.py (below) is only on my Windows PC and needs to get onto the Pi.
+- pi/servo_test.py is only on my Windows PC and needs to get onto the Pi.
 - I'm at a different location than the Pi. Windows can't resolve the Pi's .local name, and I have no Pi screen, USB drive or Ethernet cable here.
-- Options: wait until I'm back on the home Wi-Fi, then use `scp` (get the IP with `hostname -I` on the Pi). Or use a phone hotspot.
-- If Claude Code runs on my PC, it may be easiest to have it write the file and scp it over once the networks match.
+- Options: wait until I'm back on the home Wi-Fi, then deploy (below). Or use a phone hotspot. If the name doesn't work, get the IP with `hostname -I` on the Pi.
 
-## servo_test.py
+## DEPLOYING TO THE PI
+- Code for the Pi lives in the `pi/` folder. It gets copied to `~/roboticArm` on the Pi.
+- Run these from the project folder in a terminal on my PC.
+- First time only: `.\setup_ssh` (asks for the Pi password once).
+- Every time: `.\deploy` copies the files and installs missing packages. It doesn't move the arm.
+- To also run a script: `.\deploy -Run servo_test.py`. This can move the arm. Check polarity first.
+- If the name doesn't work, add `-PiAddress <the Pi's IP>` to either command.
+- Not tested on the real Pi yet, because the PC and Pi haven't been on the same network since these were written.
+- The `.cmd` files are launchers, so the scripts in `tools/` run without changing the Windows script security setting.
+- Possible later addition: Tailscale, to reach the Pi from any location.
+
+## servo_test.py (in the pi/ folder)
 Moves the claw on channel 0 in small steps, then releases it.
 
 ```python
@@ -85,16 +95,16 @@ finally:
     print("done")
 ```
 
-Run with:
+Run from my PC with:
 
 ```
-sudo apt install -y python3-smbus2 && python3 servo_test.py
+.\deploy -Run servo_test.py
 ```
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.
 
 ## NEXT STEPS
-1. Get servo_test.py onto the Pi and run it. First confirm polarity with the meter.
+1. Confirm polarity with the meter. Then run `.\setup_ssh` once, and `.\deploy -Run servo_test.py`.
 2. Test the other servos one at a time (base ch1, shoulder ch2, elbow ch3). Measure the real joint limits.
 3. Write a Pi control script for all four joints with limits and smooth motion. The old Arduino protocol was B/C/E/H<angle> (base/claw/elbow/shoulder), V<ms per degree>, S (stop), X (release).
 4. Add a small local server on the Pi so Jarvis can send commands. The hosted claude.ai page can't use USB or Web Serial, so it needs a local web page or network API.
