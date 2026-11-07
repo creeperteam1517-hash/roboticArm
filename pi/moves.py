@@ -27,9 +27,19 @@ MOVES = {
         ("base", 10),
         ("base", 170),
     ],
+    "victory_dance": [
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 10), ("claw", 80),
+        ("claw", 45),
+        ("base", 60),
+        ("base", 120),
+        ("base", 90),
+    ],
 }
 
 # Seconds to wait after each step, for moves that don't use the normal 1 second.
 DELAYS = {
     "clap": 0.5,
+    "victory_dance": 0.5,
 }
