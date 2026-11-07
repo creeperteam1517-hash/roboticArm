@@ -72,12 +72,20 @@ Run from my PC, without copying files first. This can move the arm:
 
 Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed, run `.\deploy` first.
 
+## NAMED MOVES
+- pi/arm.py is the shared code that moves joints and enforces the limits. Every script should use it.
+- pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
+- `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
+- `.\arm claw_wiggle` moved the real claw on 2026-11-06.
+- Only claw moves exist so far, because the other joints haven't been tested. There's no smooth motion yet.
+- Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
+
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.
 
 ## NEXT STEPS
 1. Confirm polarity with the meter.
 2. Test the other servos one at a time (base ch1, shoulder ch2, elbow ch3) with `.\test_servo -Joint base` and so on. Measure the real joint limits.
-3. Write a Pi control script for all four joints with limits and smooth motion. The old Arduino protocol was B/C/E/H<angle> (base/claw/elbow/shoulder), V<ms per degree>, S (stop), X (release).
+3. Add smooth motion and moves for all four joints to pi/arm.py and pi/moves.py (limits are done). The old Arduino protocol was B/C/E/H<angle> (base/claw/elbow/shoulder), V<ms per degree>, S (stop), X (release).
 4. Add a small local server on the Pi so Jarvis can send commands. The hosted claude.ai page can't use USB or Web Serial, so it needs a local web page or network API.
 5. Add the camera and vision-guided pick-and-place.
 6. Later: redesign the printed plinth for the new hardware.

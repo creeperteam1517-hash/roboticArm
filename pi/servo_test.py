@@ -9,17 +9,17 @@ import argparse
 import sys
 import time
 
-# joint: (channel, lowest angle, highest angle, gentle default moves)
-JOINTS = {
-    "claw":     (0, 10, 80,  [45, 60, 45, 30, 45]),
-    "base":     (1, 10, 170, [90, 105, 90, 75, 90]),
-    "shoulder": (2, 60, 120, [90, 105, 90, 75, 90]),
-    "elbow":    (3, 50, 130, [90, 105, 90, 75, 90]),
+from arm import Arm, JOINTS, check_angle
+
+# Gentle moves used when you don't choose your own angles.
+DEFAULT_ANGLES = {
+    "claw":     [45, 60, 45, 30, 45],
+    "base":     [90, 105, 90, 75, 90],
+    "shoulder": [90, 105, 90, 75, 90],
+    "elbow":    [90, 105, 90, 75, 90],
 }
 MIN_DELAY = 0.2
 MAX_DELAY = 10
-
-ADDR = 0x40
 
 parser = argparse.ArgumentParser(description="Test one servo joint.")
 parser.add_argument("--joint", choices=JOINTS, default="claw")
@@ -28,7 +28,7 @@ parser.add_argument("--delay", type=float, default=1.0,
                     help="seconds to wait after each move")
 args = parser.parse_args()
 
-channel, low, high, angles = JOINTS[args.joint]
+angles = DEFAULT_ANGLES[args.joint]
 
 # Check everything before touching the hardware.
 if args.angles:
@@ -37,45 +37,24 @@ if args.angles:
     except ValueError:
         sys.exit("Angles must be whole numbers, like 45,60,30. Nothing moved.")
 
-for a in angles:
-    if not low <= a <= high:
-        sys.exit(f"{a} is outside the {args.joint} limits ({low} to {high}). Nothing moved.")
+try:
+    for a in angles:
+        check_angle(args.joint, a)
+except ValueError as problem:
+    sys.exit(f"{problem} Nothing moved.")
 
 if not MIN_DELAY <= args.delay <= MAX_DELAY:
     sys.exit(f"Delay must be from {MIN_DELAY} to {MAX_DELAY} seconds. Nothing moved.")
 
-from smbus2 import SMBus  # imported here so the checks above work anywhere
-
-bus = SMBus(1)
-
-# set up the board for 50 Hz (servo speed)
-bus.write_byte_data(ADDR, 0x00, 0x10)   # sleep
-bus.write_byte_data(ADDR, 0xFE, 121)    # 50 Hz
-bus.write_byte_data(ADDR, 0x00, 0x20)   # wake up
-time.sleep(0.01)
-bus.write_byte_data(ADDR, 0x00, 0xA0)   # restart
-
-
-def move(channel, angle):
-    us = 600 + angle / 180 * 1800        # 600..2400 microseconds
-    ticks = int(us * 4096 / 20000)
-    reg = 0x06 + 4 * channel
-    bus.write_i2c_block_data(ADDR, reg, [0, 0, ticks & 0xFF, ticks >> 8])
-
-
-def release(channel):
-    reg = 0x06 + 4 * channel
-    bus.write_i2c_block_data(ADDR, reg, [0, 0, 0, 0x10])   # power off
-
-
-print(f"Testing {args.joint} on channel {channel}")
+arm = Arm()
+print(f"Testing {args.joint} on channel {JOINTS[args.joint][0]}")
 try:
     for a in angles:
         print("angle", a)
-        move(channel, a)
+        arm.move(args.joint, a)
         time.sleep(args.delay)
 except KeyboardInterrupt:
     print("Stopped early.")
 finally:
-    release(channel)
+    arm.release(args.joint)
     print("done")
