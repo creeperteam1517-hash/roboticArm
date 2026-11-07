@@ -41,7 +41,9 @@
 - Multimeter: KAIWEETS KM100, dial on 20 in the DC V section, black probe in COM, red probe in VOmA.
 - Done: SSH key login works from my PC. pi/servo_test.py is on the Pi in ~/roboticArm. python3-smbus2 is installed.
 - Done on 2026-11-06: the claw (channel 0) moved in the gentle test. An earlier run that same night finished without errors but the claw didn't move, and the cause is unknown. If it happens again, check the 6V power first.
-- Not done: base, shoulder and elbow haven't been tested.
+- The claw moved from 10 to 80 with no strain on 2026-11-06, so the claw limits look okay for now.
+- `.\arm wave` ran without errors but the base didn't move. The claw still moved right after, so power and the board work. Check the base servo's plug on channel 1 next.
+- Not done: shoulder and elbow haven't been tested, and the base hasn't moved yet.
 - Old servos may have been stressed by the earlier reverse-polarity incident, so test each one.
 
 ## CURRENT BLOCKER
@@ -58,6 +60,19 @@
 - Tested on the real Pi on 2026-11-06, at 10.0.0.171 on my home Wi-Fi. That address could change. If so, get the new one with `hostname -I` on the Pi.
 - The `.cmd` files are launchers, so the scripts in `tools/` run without changing the Windows script security setting.
 - Possible later addition: Tailscale, to reach the Pi from any location.
+
+## USING ANOTHER COMPUTER (Windows)
+1. Install Git and Claude Code. Windows already includes SSH.
+2. Run `git clone https://github.com/creeperteam1517-hash/roboticArm.git`, then `cd roboticArm`.
+3. Run `.\setup_ssh` once on that computer. I type the Pi's password in the terminal.
+4. Run `.\arm` to list the moves. This doesn't move the arm, and it proves the login works.
+- The computer and the Pi must be on the same network, unless Tailscale is set up.
+- The scripts don't run on Mac or Linux. Claude would need to write versions for that system.
+
+## MOVING THE PI TO A NEW LOCATION
+- The Pi only joins Wi-Fi it already knows, and I may not have a screen there. Before leaving, add the new Wi-Fi details, or a phone hotspot as a backup.
+- The address 10.0.0.171 only applies to my home network. Try the Pi's name first. If that fails, find the Pi in the router's or hotspot's device list, then add `-PiAddress <address>` to commands.
+- Optional: install Tailscale before leaving, to reach the Pi from anywhere while it's online.
 
 ## SERVO TEST
 pi/servo_test.py moves one joint through a list of angles, then releases it. It refuses angles outside the old joint limits before anything moves. The real limits still need measuring.
