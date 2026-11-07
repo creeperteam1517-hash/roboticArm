@@ -37,15 +37,16 @@
 
 ## STATUS
 - Done: I2C wiring verified. 6V supply, fuse and holder wired to the PCA9685 power block.
-- **NOT verified: power polarity.** I said it was right, but I never gave a multimeter reading. Please have me measure DC volts at the PCA9685 V+ (right) and GND (left) with the servo UNPLUGGED. Black probe on GND, red on V+. It should read about +6 (a minus sign means reversed). A fuse does not protect against reversed polarity.
+- **Power polarity not measured yet.** The claw moving is a good sign that it's right, but I chose to skip the meter check, so there's still no reading. Please have me measure DC volts at the PCA9685 V+ (right) and GND (left) with the servo UNPLUGGED. Black probe on GND, red on V+. It should read about +6 (a minus sign means reversed). A fuse does not protect against reversed polarity.
 - Multimeter: KAIWEETS KM100, dial on 20 in the DC V section, black probe in COM, red probe in VOmA.
-- Not done: the servo test has never been run on hardware. Whether python3-smbus2 is installed on the Pi is unknown.
+- Done: SSH key login works from my PC. pi/servo_test.py is on the Pi in ~/roboticArm. python3-smbus2 is installed.
+- Done on 2026-11-06: the claw (channel 0) moved in the gentle test. An earlier run that same night finished without errors but the claw didn't move, and the cause is unknown. If it happens again, check the 6V power first.
+- Not done: base, shoulder and elbow haven't been tested.
 - Old servos may have been stressed by the earlier reverse-polarity incident, so test each one.
 
 ## CURRENT BLOCKER
-- pi/servo_test.py is only on my Windows PC and needs to get onto the Pi.
-- I'm at a different location than the Pi. Windows can't resolve the Pi's .local name, and I have no Pi screen, USB drive or Ethernet cable here.
-- Options: wait until I'm back on the home Wi-Fi, then deploy (below). Or use a phone hotspot. If the name doesn't work, get the IP with `hostname -I` on the Pi.
+- No blockers right now. Worth measuring power polarity (see STATUS) before connecting the other servos.
+- To do soon: change the Pi password with `passwd`, because it was accidentally pasted into a Claude chat.
 
 ## DEPLOYING TO THE PI
 - Code for the Pi lives in the `pi/` folder. It gets copied to `~/roboticArm` on the Pi.
@@ -54,58 +55,28 @@
 - Every time: `.\deploy` copies the files and installs missing packages. It doesn't move the arm.
 - To also run a script: `.\deploy -Run servo_test.py`. This can move the arm. Check polarity first.
 - If the name doesn't work, add `-PiAddress <the Pi's IP>` to either command.
-- Not tested on the real Pi yet, because the PC and Pi haven't been on the same network since these were written.
+- Tested on the real Pi on 2026-11-06, at 10.0.0.171 on my home Wi-Fi. That address could change. If so, get the new one with `hostname -I` on the Pi.
 - The `.cmd` files are launchers, so the scripts in `tools/` run without changing the Windows script security setting.
 - Possible later addition: Tailscale, to reach the Pi from any location.
 
-## servo_test.py (in the pi/ folder)
-Moves the claw on channel 0 in small steps, then releases it.
+## SERVO TEST
+pi/servo_test.py moves one joint through a list of angles, then releases it. It refuses angles outside the old joint limits before anything moves. The real limits still need measuring.
 
-```python
-import time
-from smbus2 import SMBus
-
-ADDR = 0x40
-bus = SMBus(1)
-
-bus.write_byte_data(ADDR, 0x00, 0x10)   # sleep
-bus.write_byte_data(ADDR, 0xFE, 121)    # 50 Hz
-bus.write_byte_data(ADDR, 0x00, 0x20)   # wake up
-time.sleep(0.01)
-bus.write_byte_data(ADDR, 0x00, 0xA0)   # restart
-
-def move(channel, angle):
-    us = 600 + angle / 180 * 1800        # 600..2400 microseconds
-    ticks = int(us * 4096 / 20000)
-    reg = 0x06 + 4 * channel
-    bus.write_i2c_block_data(ADDR, reg, [0, 0, ticks & 0xFF, ticks >> 8])
-
-def release(channel):
-    reg = 0x06 + 4 * channel
-    bus.write_i2c_block_data(ADDR, reg, [0, 0, 0, 0x10])   # power off
-
-CH = 0
-try:
-    for a in (45, 60, 45, 30, 45):
-        print("angle", a)
-        move(CH, a)
-        time.sleep(1)
-finally:
-    release(CH)
-    print("done")
-```
-
-Run from my PC with:
+Run from my PC, without copying files first. This can move the arm:
 
 ```
-.\deploy -Run servo_test.py
+.\test_servo
+.\test_servo -Joint base
+.\test_servo -Joint claw -Angles 45,60,30 -Delay 2
 ```
+
+Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed, run `.\deploy` first.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.
 
 ## NEXT STEPS
-1. Confirm polarity with the meter. Then run `.\setup_ssh` once, and `.\deploy -Run servo_test.py`.
-2. Test the other servos one at a time (base ch1, shoulder ch2, elbow ch3). Measure the real joint limits.
+1. Confirm polarity with the meter.
+2. Test the other servos one at a time (base ch1, shoulder ch2, elbow ch3) with `.\test_servo -Joint base` and so on. Measure the real joint limits.
 3. Write a Pi control script for all four joints with limits and smooth motion. The old Arduino protocol was B/C/E/H<angle> (base/claw/elbow/shoulder), V<ms per degree>, S (stop), X (release).
 4. Add a small local server on the Pi so Jarvis can send commands. The hosted claude.ai page can't use USB or Web Serial, so it needs a local web page or network API.
 5. Add the camera and vision-guided pick-and-place.

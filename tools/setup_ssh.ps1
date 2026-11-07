@@ -12,7 +12,7 @@ $KeyPath = Join-Path $SshDir "id_ed25519"
 $HostKeyOption = "StrictHostKeyChecking=accept-new"
 
 function Test-KeyLogin {
-    ssh -o BatchMode=yes -o ConnectTimeout=10 -o $HostKeyOption $Target "exit" 2>$null
+    ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o $HostKeyOption $Target "exit" 2>$null
     return ($LASTEXITCODE -eq 0)
 }
 

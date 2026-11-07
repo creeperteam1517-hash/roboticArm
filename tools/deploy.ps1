@@ -28,7 +28,7 @@ if ($Run -and -not (Test-Path (Join-Path $LocalDir $Run) -PathType Leaf)) {
 
 # Step 1: make sure the Pi can be reached.
 Write-Host "Step 1 of 3: Looking for the Pi at $PiAddress..."
-ssh -o BatchMode=yes -o ConnectTimeout=10 -o $HostKeyOption $Target "mkdir -p ~/$RemoteDir" 2>$null
+ssh -n -o BatchMode=yes -o ConnectTimeout=10 -o $HostKeyOption $Target "mkdir -p ~/$RemoteDir" 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "Couldn't log in to the Pi. Nothing is broken, and nothing was copied." -ForegroundColor Yellow
@@ -50,10 +50,13 @@ if ($LASTEXITCODE -ne 0) {
 # Step 3: install anything missing. Packages already installed are skipped.
 Write-Host "Step 3 of 3: Checking the Pi has what it needs..."
 foreach ($Package in $Packages) {
-    ssh -t $Target "dpkg -s $Package >/dev/null 2>&1 || sudo apt install -y $Package"
+    ssh -n $Target "dpkg -s $Package >/dev/null 2>&1"
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Couldn't install $Package on the Pi. Your files were copied. Is the Pi online?" -ForegroundColor Yellow
-        exit 1
+        ssh -t $Target "sudo apt install -y $Package"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Couldn't install $Package on the Pi. Your files were copied. Is the Pi online?" -ForegroundColor Yellow
+            exit 1
+        }
     }
 }
 
