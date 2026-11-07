@@ -1,6 +1,6 @@
-"""Jarvis: a small web server on the Pi with a chat page that can move the arm.
+"""Jarvis: a small web server on the Pi with buttons, sliders and a chat that can move the arm.
 
-Starting this server never moves the arm. Only a chat request, or Stop, touches the servos.
+Starting this server never moves the arm. Only a button, slider, chat request or Stop touches the servos.
 Uses Python's standard library, smbus2 through arm.py, and the anthropic library for chat.
 """
 import json
@@ -22,7 +22,8 @@ PORT = int(os.environ.get("JARVIS_PORT", "8000"))
 PAGE = Path(__file__).with_name("jarvis.html")
 
 DEFAULT_DELAY = 1.0
-HOLD_SECONDS = 10         # a joint set from chat relaxes after this long, so servos don't strain
+HOLD_SECONDS = 10         # a slider or chat position relaxes after this long, so servos don't strain
+TESTED_JOINTS = {"claw", "base"}   # the page locks the others until unlocked
 MAX_BODY_BYTES = 8192
 
 
@@ -74,9 +75,19 @@ class Jarvis:
                 "error": self.error,
                 "chat_ready": jarvis_chat.chat_ready(),
                 "voice_ready": jarvis_chat.voice_ready(),
+                "hold_seconds": HOLD_SECONDS,
+                "moves": list(MOVES),
                 "joints": [
-                    {"name": name, "last_angle": self.last_angles.get(name), "held": name in self.held}
-                    for name in JOINTS
+                    {
+                        "name": name,
+                        "channel": channel,
+                        "low": low,
+                        "high": high,
+                        "tested": name in TESTED_JOINTS,
+                        "last_angle": self.last_angles.get(name),
+                        "held": name in self.held,
+                    }
+                    for name, (channel, low, high) in JOINTS.items()
                 ],
             }
 
@@ -218,6 +229,18 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(text, str):
                     raise ValueError("Nothing to say.")
                 self._send(200, jarvis_chat.speak(text), "audio/mpeg")
+            elif self.path == "/api/move":
+                name = data.get("move")
+                if not isinstance(name, str):
+                    raise ValueError("Choose a move.")
+                jarvis.start_move(name)
+                self._json(200, jarvis.state())
+            elif self.path == "/api/joint":
+                joint, angle = data.get("joint"), data.get("angle")
+                if type(angle) is not int or not isinstance(joint, str):
+                    raise ValueError("Choose a joint and a whole-number angle.")
+                jarvis.set_joint(joint, angle)
+                self._json(200, jarvis.state())
             elif self.path == "/api/stop":
                 jarvis.stop()
                 self._json(200, jarvis.state())

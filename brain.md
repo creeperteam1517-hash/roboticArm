@@ -93,14 +93,15 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 
 ## JARVIS CHAT PAGE
 - Open http://10.0.0.171:8000 in a browser on the same network. No monitor is needed on the Pi. The `the-coolest-raspberry-pi.local` name also works at port 8000 when the name is working.
-- It's chat only, as I asked: type to Jarvis, which answers questions and moves the arm when asked. Replies are read aloud in George's voice (ElevenLabs), or the browser's own voice if there's no ElevenLabs key. There's also one big Stop button for safety.
+- It has routine buttons, claw and base sliders, a chat, and a big Stop button, merged on one page as I asked. The buttons, sliders and Stop work with no keys. The chat answers questions and moves the arm when asked, and switches on once the Claude key is set. Replies are read aloud in George's voice (ElevenLabs), or the browser's own voice if there's no ElevenLabs key.
+- Shoulder and elbow sliders stay locked until unlocked on the page. A slider position holds for 10 seconds, then relaxes.
 - Chat uses Claude (`claude-opus-5-5`, low effort, with automatic fallback if Claude declines) through the official anthropic library, 1.x, in its own environment on the Pi at ~/.local/share/jarvis/venv. `.\deploy` installs it.
 - Keys: run `.\set_keys` on the PC and type the Claude key (and optionally the ElevenLabs key) in the terminal. They're saved only on the Pi, in ~/.config/jarvis/keys.env, readable only by my user, never in this repo. The Claude API is paid separately from a Claude subscription.
 - Chat can run routines, move the claw or base to an angle, stop, and check status. It can't move the shoulder or elbow until they're tested. It only moves the arm when my latest message asks. It can't see the arm, so it says commands were sent, not that the arm moved.
 - One shared conversation for everyone using the page. "New chat" clears it, and it starts fresh by itself after 30 messages.
-- Before chat, the button version's Clap button moved the real claw on 2026-11-07. The chat version was tested with a fake board and a fake Claude, but hasn't run with real keys or moved the real arm yet.
+- The Clap button moved the real claw on 2026-11-07, before the chat was added. The merged page was tested with a fake board and a fake Claude, but hasn't run with real keys, and chat hasn't moved the real arm yet.
 - Files: pi/jarvis_server.py, pi/jarvis_chat.py, pi/jarvis.html, pi/jarvis.service, pi/set_keys.py. It runs as a user service on the Pi, so `.\deploy` copies and restarts it without a password. It's set to start when the Pi turns on, but that hasn't been tested with a restart yet.
-- It has no password, so anyone on the Wi-Fi can chat with it, move the arm, and spend Claude credit. Keep it off the public internet. It refuses commands sent from other websites.
+- It has no password, so anyone on the Wi-Fi can use the buttons, chat with it, move the arm, and spend Claude credit. Keep it off the public internet. It refuses commands sent from other websites.
 - The older Jarvis on claude.ai still has its own features (tasks, files, 3D, Tripo), but its arm controls only worked with the old Arduino over USB.
 
 ## NAMED MOVES
@@ -108,7 +109,7 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
 - `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
 - `.\arm claw_wiggle` moved the real claw on 2026-11-06.
-- Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing). To add a move, change pi/moves.py and run `.\deploy`. Jarvis chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
+- Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing). To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.

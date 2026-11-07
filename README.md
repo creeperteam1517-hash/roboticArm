@@ -12,7 +12,7 @@ This is a work in progress.
 | Claw | Moved on real hardware, from 10 to 80 degrees |
 | Base | Moved on real hardware, from 8 to 170 degrees, but sometimes doesn't move |
 | Shoulder and elbow | Not tested yet |
-| Jarvis chat page | Installed on the Pi. Tested offline, not yet with real keys |
+| Jarvis page (buttons and chat) | Installed on the Pi. The Clap button moved the real claw. Chat tested offline, not yet with real keys |
 | Smooth motion | Planned |
 | Connecting a chat front end, and camera pick-and-place | Planned |
 
@@ -69,7 +69,7 @@ The scripts use this project's Pi name and username by default. For a different 
 
 ## Jarvis chat page
 
-Jarvis is a chat page hosted on the Pi. Type to it, and it answers questions and moves the arm when you ask, speaking its replies aloud. There's also a Stop button. On a phone or computer on the same network, open `http://<pi-address>:8000`. The Pi doesn't need a monitor, and loading the page doesn't move the arm.
+Jarvis is a page hosted on the Pi with routine buttons, joint sliders, a chat and a Stop button. The buttons work with no setup. Type to the chat, and it answers questions and moves the arm when you ask, speaking its replies aloud. On a phone or computer on the same network, open `http://<pi-address>:8000`. The Pi doesn't need a monitor, and loading the page doesn't move the arm.
 
 Chat needs a Claude API key, and George's voice needs an ElevenLabs key. Run `.\set_keys` and type them in. They're saved only on the Pi, never in this repository.
 
