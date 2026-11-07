@@ -42,8 +42,12 @@
 - Done: SSH key login works from my PC. pi/servo_test.py is on the Pi in ~/roboticArm. python3-smbus2 is installed.
 - Done on 2026-11-06: the claw (channel 0) moved in the gentle test. An earlier run that same night finished without errors but the claw didn't move, and the cause is unknown. If it happens again, check the 6V power first.
 - The claw moved from 10 to 80 with no strain on 2026-11-06, so the claw limits look okay for now.
-- `.\arm wave` ran without errors but the base didn't move. The claw still moved right after, so power and the board work. Check the base servo's plug on channel 1 next.
-- Not done: shoulder and elbow haven't been tested, and the base hasn't moved yet.
+- The base (channel 1) moved from 10 to 170 with no strain on 2026-11-06, so the base limits look okay for now.
+- **The base sometimes doesn't move, even though the script finishes without errors.** It happened in `.\arm wave`, and again in the base sweep right after five claw claps (right after a Pi restart). The base-only sweep moved straight after that. Cause unknown. Next: with the 6V supply unplugged, check the base servo's plug and wires for a loose connection. Then check the power, because the 6V supply is still unmeasured.
+- On 2026-11-07 the base once stopped short of 170 during `-Angles 10,170 -Delay 10`, cause unknown. Later, moving to 10 and then to 170 as two separate commands with a 1-second wait reached 170. Commands can't send 180, because the limit is 170.
+- The base's lowest limit in pi/arm.py is now 8, confirmed with no strain on 2026-11-07. A move to 6 ran, but I didn't report how it looked. A try at 0 showed no movement, so 0 is unconfirmed. I remember reaching 0 before.
+- On 2026-11-07 the Pi stopped answering on the network, and restarting it fixed that. Cause unknown. The Pi's .local name also only works some of the time, so use `-PiAddress 10.0.0.171` if it fails.
+- Not done: shoulder and elbow haven't been tested.
 - Old servos may have been stressed by the earlier reverse-polarity incident, so test each one.
 
 ## CURRENT BLOCKER
@@ -92,7 +96,7 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
 - `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
 - `.\arm claw_wiggle` moved the real claw on 2026-11-06.
-- Only claw moves exist so far, because the other joints haven't been tested. There's no smooth motion yet.
+- Moves so far are `claw_wiggle` and `wave` (base). Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.

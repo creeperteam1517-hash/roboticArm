@@ -3,7 +3,7 @@
 # joint: (channel, lowest angle, highest angle)
 JOINTS = {
     "claw":     (0, 10, 80),
-    "base":     (1, 10, 170),
+    "base":     (1, 8, 170),
     "shoulder": (2, 60, 120),
     "elbow":    (3, 50, 130),
 }

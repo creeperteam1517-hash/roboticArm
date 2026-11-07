@@ -10,7 +10,7 @@ This is a work in progress.
 |---|---|
 | Sending commands from the PC to the Pi | Working |
 | Claw | Moved on real hardware, from 10 to 80 degrees |
-| Base | Not moving yet, being checked |
+| Base | Moved on real hardware, from 8 to 170 degrees, but sometimes doesn't move |
 | Shoulder and elbow | Not tested yet |
 | Smooth motion | Planned |
 | Chat front end and camera pick-and-place | Planned |
@@ -24,11 +24,11 @@ This is a work in progress.
 | Joint | Channel | Allowed angles |
 |---|---|---|
 | Claw | 0 | 10 to 80 |
-| Base | 1 | 10 to 170 |
+| Base | 1 | 8 to 170 |
 | Shoulder | 2 | 60 to 120 |
 | Elbow | 3 | 50 to 130 |
 
-Only the claw's range has been tried on real hardware. The other limits still need measuring.
+Only the claw and base ranges have been tried on real hardware. The shoulder and elbow limits still need measuring.
 
 ### Wiring
 
