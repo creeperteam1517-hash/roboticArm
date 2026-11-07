@@ -63,6 +63,13 @@ foreach ($Package in $Packages) {
 # Step 4: start Jarvis with the new code. It also starts by itself when the Pi turns on.
 # Restarting relaxes the servos, but starting Jarvis never moves the arm.
 Write-Host "Step 4 of 4: Restarting the Jarvis page..."
+# Jarvis uses its own Python environment for the anthropic library. The first run downloads it.
+$Venv = "~/.local/share/jarvis/venv"
+ssh -n $Target "test -x $Venv/bin/python || python3 -m venv --system-site-packages $Venv; $Venv/bin/python -c 'import anthropic' 2>/dev/null || $Venv/bin/pip install --quiet 'anthropic>=1.17,<2'"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Your files were copied, but the chat library didn't install. Is the Pi online?" -ForegroundColor Yellow
+    exit 1
+}
 ssh -n $Target "mkdir -p ~/.config/systemd/user && cp ~/$RemoteDir/jarvis.service ~/.config/systemd/user/jarvis.service && systemctl --user daemon-reload && systemctl --user enable --quiet jarvis && loginctl enable-linger && systemctl --user restart jarvis && sleep 2 && systemctl --user is-active --quiet jarvis"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Your files were copied, but Jarvis didn't start. Nothing moved. Share this message with Claude." -ForegroundColor Yellow

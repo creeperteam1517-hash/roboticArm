@@ -1,9 +1,10 @@
 [Unit]
-Description=Jarvis robotic arm web page
+Description=Jarvis robotic arm chat page
 
 [Service]
 WorkingDirectory=%h/roboticArm
-ExecStart=/usr/bin/python3 -u jarvis_server.py
+EnvironmentFile=-%h/.config/jarvis/keys.env
+ExecStart=%h/.local/share/jarvis/venv/bin/python -u jarvis_server.py
 Restart=on-failure
 RestartSec=3
 

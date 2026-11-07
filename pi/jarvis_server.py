@@ -1,7 +1,7 @@
-"""Jarvis: a small web server on the Pi that controls the arm from a browser page.
+"""Jarvis: a small web server on the Pi with a chat page that can move the arm.
 
-Starting this server never moves the arm. Only a button or slider on the page does.
-Uses only Python's standard library, plus smbus2 through arm.py.
+Starting this server never moves the arm. Only a chat request, or Stop, touches the servos.
+Uses Python's standard library, smbus2 through arm.py, and the anthropic library for chat.
 """
 import json
 import os
@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import jarvis_chat
 from arm import Arm, JOINTS, check_angle
 from moves import DELAYS, MOVES
 
@@ -21,9 +22,8 @@ PORT = int(os.environ.get("JARVIS_PORT", "8000"))
 PAGE = Path(__file__).with_name("jarvis.html")
 
 DEFAULT_DELAY = 1.0
-HOLD_SECONDS = 10         # a slider position relaxes after this long, so servos don't strain
-TESTED_JOINTS = {"claw", "base"}   # the page locks the others until unlocked
-MAX_BODY_BYTES = 1024
+HOLD_SECONDS = 10         # a joint set from chat relaxes after this long, so servos don't strain
+MAX_BODY_BYTES = 8192
 
 
 class Busy(Exception):
@@ -72,19 +72,11 @@ class Jarvis:
                 "running": self.running,
                 "step": self.step,
                 "error": self.error,
-                "hold_seconds": HOLD_SECONDS,
-                "moves": list(MOVES),
+                "chat_ready": jarvis_chat.chat_ready(),
+                "voice_ready": jarvis_chat.voice_ready(),
                 "joints": [
-                    {
-                        "name": name,
-                        "channel": channel,
-                        "low": low,
-                        "high": high,
-                        "tested": name in TESTED_JOINTS,
-                        "last_angle": self.last_angles.get(name),
-                        "held": name in self.held,
-                    }
-                    for name, (channel, low, high) in JOINTS.items()
+                    {"name": name, "last_angle": self.last_angles.get(name), "held": name in self.held}
+                    for name in JOINTS
                 ],
             }
 
@@ -159,6 +151,7 @@ class Jarvis:
 
 
 jarvis = Jarvis()
+chat = jarvis_chat.Chat(jarvis, (Busy, HardwareError))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -211,27 +204,30 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             data = self._read_json()
-            if self.path == "/api/move":
-                name = data.get("move")
-                if not isinstance(name, str):
-                    raise ValueError("Choose a move.")
-                jarvis.start_move(name)
-            elif self.path == "/api/joint":
-                joint, angle = data.get("joint"), data.get("angle")
-                if type(angle) is not int or not isinstance(joint, str):
-                    raise ValueError("Choose a joint and a whole-number angle.")
-                jarvis.set_joint(joint, angle)
+            if self.path == "/api/chat":
+                text = data.get("message")
+                if not isinstance(text, str):
+                    raise ValueError("Type a message first.")
+                reply, actions, fresh = chat.send(text)
+                self._json(200, {"reply": reply, "actions": actions, "fresh_start": fresh})
+            elif self.path == "/api/chat/reset":
+                chat.reset()
+                self._json(200, {"ok": True})
+            elif self.path == "/api/speak":
+                text = data.get("text")
+                if not isinstance(text, str):
+                    raise ValueError("Nothing to say.")
+                self._send(200, jarvis_chat.speak(text), "audio/mpeg")
             elif self.path == "/api/stop":
                 jarvis.stop()
+                self._json(200, jarvis.state())
             else:
                 self._json(404, {"error": "Not found."})
-                return
-            self._json(200, jarvis.state())
         except ValueError as problem:
             self._json(400, {"error": str(problem)})
-        except Busy as problem:
+        except (Busy, jarvis_chat.ChatBusy) as problem:
             self._json(409, {"error": str(problem)})
-        except HardwareError as problem:
+        except (HardwareError, jarvis_chat.ChatUnavailable) as problem:
             self._json(503, {"error": str(problem)})
 
 
