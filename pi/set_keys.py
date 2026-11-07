@@ -25,6 +25,23 @@ def read_existing():
     return values
 
 
+def save(values):
+    """Write every saved value, readable only by this user."""
+    KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(KEY_FILE.parent, 0o700)
+    fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as handle:
+        for name, value in values.items():
+            if value:
+                handle.write(f"{name}={value}\n")
+    os.chmod(KEY_FILE, 0o600)
+
+
+def restart_jarvis():
+    restarted = subprocess.run(["systemctl", "--user", "restart", "jarvis"]).returncode == 0
+    print("Done! Refresh the Jarvis page." if restarted else "Saved, but Jarvis didn't restart. Run .\\deploy.")
+
+
 def main():
     values = read_existing()
     print("Type or paste each key, then press Enter. Nothing shows as you type. That's normal.")
@@ -33,17 +50,9 @@ def main():
         entered = getpass.getpass(f"{label}{note}: ").strip()
         if entered:
             values[name] = entered
-    KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(KEY_FILE.parent, 0o700)
-    fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w") as handle:
-        for name, _ in NAMES:
-            if values.get(name):
-                handle.write(f"{name}={values[name]}\n")
-    os.chmod(KEY_FILE, 0o600)
+    save(values)
     print("Saved on the Pi only. Restarting Jarvis...")
-    restarted = subprocess.run(["systemctl", "--user", "restart", "jarvis"]).returncode == 0
-    print("Done! Refresh the Jarvis page." if restarted else "Saved, but Jarvis didn't restart. Run .\\deploy.")
+    restart_jarvis()
 
 
 if __name__ == "__main__":

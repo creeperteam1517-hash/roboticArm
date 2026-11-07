@@ -3,6 +3,7 @@
 Starting this server never moves the arm. Only a button, slider, chat request or Stop touches the servos.
 Uses Python's standard library, smbus2 through arm.py, and the anthropic library for chat.
 """
+import hmac
 import json
 import os
 import signal
@@ -254,6 +255,79 @@ class Handler(BaseHTTPRequestHandler):
             self._json(503, {"error": str(problem)})
 
 
+REMOTE_PORT = int(os.environ.get("JARVIS_REMOTE_PORT", "8001"))
+MIN_TOKEN_LENGTH = 20
+
+
+class RemoteHandler(Handler):
+    """Arm commands for claude.ai Jarvis, sent through Composio and Tailscale Funnel.
+
+    It only listens inside the Pi (127.0.0.1), so only Tailscale can pass requests to it,
+    and every request needs the secret code. Chat and voice aren't offered here.
+    """
+
+    def _token_ok(self):
+        expected = os.environ.get("JARVIS_REMOTE_TOKEN", "")
+        given = self.headers.get("X-Jarvis-Token", "")
+        if len(expected) >= MIN_TOKEN_LENGTH and hmac.compare_digest(given.encode(), expected.encode()):
+            return True
+        time.sleep(1)   # slow down anyone guessing codes
+        self._json(401, {"error": "Wrong or missing secret code."})
+        return False
+
+    def do_GET(self):
+        if not self._token_ok():
+            return
+        if self.path == "/remote/state":
+            self._json(200, jarvis.state())
+        else:
+            self._json(404, {"error": "Not found."})
+
+    def do_POST(self):
+        if not self._token_ok():
+            return
+        if self.headers.get_content_type() != "application/json":
+            self._json(415, {"error": "Send JSON."})
+            return
+        try:
+            data = self._read_json()
+            if self.path == "/remote/move":
+                name = data.get("move")
+                if not isinstance(name, str):
+                    raise ValueError("Choose a move.")
+                jarvis.start_move(name)
+            elif self.path == "/remote/joint":
+                joint, angle = data.get("joint"), data.get("angle")
+                if type(angle) is not int or not isinstance(joint, str):
+                    raise ValueError("Choose a joint and a whole-number angle.")
+                if joint not in TESTED_JOINTS:
+                    raise ValueError(f"{joint} can't be moved remotely until it's tested.")
+                jarvis.set_joint(joint, angle)
+            elif self.path == "/remote/stop":
+                jarvis.stop()
+            else:
+                self._json(404, {"error": "Not found."})
+                return
+            self._json(200, jarvis.state())
+        except ValueError as problem:
+            self._json(400, {"error": str(problem)})
+        except Busy as problem:
+            self._json(409, {"error": str(problem)})
+        except HardwareError as problem:
+            self._json(503, {"error": str(problem)})
+
+
+def start_remote_server():
+    token = os.environ.get("JARVIS_REMOTE_TOKEN", "")
+    if len(token) < MIN_TOKEN_LENGTH:
+        print("Remote entrance is off (no secret code set)")
+        return
+    remote = ThreadingHTTPServer(("127.0.0.1", REMOTE_PORT), RemoteHandler)
+    remote.daemon_threads = True
+    threading.Thread(target=remote.serve_forever, daemon=True).start()
+    print(f"Remote entrance is listening inside the Pi on port {REMOTE_PORT}")
+
+
 def watch_holds():
     while True:
         time.sleep(0.5)
@@ -271,6 +345,7 @@ def shut_down(signum, frame):
 def main():
     signal.signal(signal.SIGTERM, shut_down)
     threading.Thread(target=watch_holds, daemon=True).start()
+    start_remote_server()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     server.daemon_threads = True
     print(f"Jarvis is listening on port {PORT}")

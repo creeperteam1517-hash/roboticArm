@@ -104,6 +104,17 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - It has no password, so anyone on the Wi-Fi can use the buttons, chat with it, move the arm, and spend Claude credit. Keep it off the public internet. It refuses commands sent from other websites.
 - The older Jarvis on claude.ai still has its own features (tasks, files, 3D, Tripo), but its arm controls only worked with the old Arduino over USB.
 
+## REMOTE ARM CONTROL (claude.ai Jarvis -> Composio -> Pi)
+- Goal: let the claude.ai Jarvis move the arm using my Claude subscription, with no API key.
+- How it works: claude.ai Jarvis runs a small request in Composio's cloud workbench, which sends it to the Pi's public Tailscale Funnel address https://the-coolest-raspberry-pi.taile11589.ts.net. Funnel passes it to a locked "remote entrance" inside the Pi (127.0.0.1:8001, in pi/jarvis_server.py).
+- The remote entrance only offers: arm state, run a routine, move the claw or base, and stop. Every request needs the secret code in the X-Jarvis-Token header. Wrong codes are refused and slowed down. The home page, chat, voice and keys aren't reachable from the internet.
+- Secret code: make it with `.\remote_token` (shown once, saved only on the Pi). Making a new one locks out the old one. It goes into the Robot tab of claude.ai Jarvis, saved per device. Never paste it into a Claude chat.
+- Tailscale 1.104.5 is installed on the Pi (`.\install_tailscale`), signed in to my account. Funnel was turned on 2026-11-07 for port 8001.
+- To turn public access off: `ssh -t groot_the_builder@10.0.0.171 "sudo tailscale funnel --https=443 off"`
+- Tested 2026-11-07: from the internet, no code and a wrong code got 401, and the home page and chat were refused. Composio's workbench reached the entrance (with a wrong code, so nothing moved).
+- The claude.ai Jarvis (https://claude.ai/artifact/2xNeQuiwphvp232UuiJmPW, version 22, 2026-11-07) now has a Robot tab that talks to the Pi: routines, claw and base controls, Stop, and a box to save the secret code on each device. Its robot tool for chat uses the same routes. It hasn't been tried with the real code yet.
+- Tailscale also lets my Tailscale devices reach the Pi from other locations.
+
 ## NAMED MOVES
 - pi/arm.py is the shared code that moves joints and enforces the limits. Every script should use it.
 - pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
