@@ -10,7 +10,7 @@ This is a work in progress.
 |---|---|
 | Sending commands from the PC to the Pi | Working |
 | Claw | Moved on real hardware, from 10 to 80 degrees |
-| Base | Moved on real hardware, from 8 to 170 degrees, but sometimes doesn't move |
+| Base | Calibrated on real hardware, 0 to 180 degrees, but sometimes doesn't move |
 | Shoulder and elbow | Not tested yet |
 | Jarvis page (buttons and chat) | Installed on the Pi. The Clap button moved the real claw. Chat tested offline, not yet with real keys |
 | Smooth motion | Planned |
@@ -25,7 +25,7 @@ This is a work in progress.
 | Joint | Channel | Allowed angles |
 |---|---|---|
 | Claw | 0 | 10 to 80 |
-| Base | 1 | 8 to 170 |
+| Base | 1 | 0 to 180 (calibrated) |
 | Shoulder | 2 | 60 to 120 |
 | Elbow | 3 | 50 to 130 |
 

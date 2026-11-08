@@ -15,12 +15,15 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import jarvis_chat
+import jarvis_data
 from arm import Arm, JOINTS, check_angle
 from moves import DELAYS, MOVES
 
 HOST = os.environ.get("JARVIS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("JARVIS_PORT", "8000"))
 PAGE = Path(__file__).with_name("jarvis.html")
+# The page can also be opened at this private Tailscale address (secure, so the microphone works).
+TAILSCALE_HOST = os.environ.get("JARVIS_TS_HOST", "the-coolest-raspberry-pi.taile11589.ts.net")
 
 DEFAULT_DELAY = 1.0
 HOLD_SECONDS = 10         # a slider or chat position relaxes after this long, so servos don't strain
@@ -163,7 +166,8 @@ class Jarvis:
 
 
 jarvis = Jarvis()
-chat = jarvis_chat.Chat(jarvis, (Busy, HardwareError))
+store = jarvis_data.Store()
+chat = jarvis_chat.Chat(jarvis, (Busy, HardwareError), store)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -188,6 +192,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
         elif self.path == "/api/state":
             self._json(200, jarvis.state())
+        elif self.path == "/api/assistant":
+            self._json(200, store.snapshot())
         else:
             self._json(404, {"error": "Not found."})
 
@@ -196,7 +202,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get_content_type() != "application/json":
             return False
         origin = self.headers.get("Origin")
-        return origin is None or urlsplit(origin).netloc == self.headers.get("Host")
+        if origin is None:
+            return True
+        origin_host = urlsplit(origin).hostname
+        return urlsplit(origin).netloc == self.headers.get("Host") or origin_host == TAILSCALE_HOST
 
     def _read_json(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -245,6 +254,17 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/stop":
                 jarvis.stop()
                 self._json(200, jarvis.state())
+            elif self.path in ("/api/tasks/toggle", "/api/tasks/remove", "/api/reminders/remove"):
+                item = data.get("id")
+                if not isinstance(item, str):
+                    raise ValueError("Choose an item.")
+                if self.path == "/api/tasks/toggle":
+                    store.set_task_done(item, bool(data.get("done")))
+                elif self.path == "/api/tasks/remove":
+                    store.remove_task(item)
+                else:
+                    store.remove_reminder(item)
+                self._json(200, store.snapshot())
             else:
                 self._json(404, {"error": "Not found."})
         except ValueError as problem:

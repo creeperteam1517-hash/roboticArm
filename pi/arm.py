@@ -3,12 +3,30 @@
 # joint: (channel, lowest angle, highest angle)
 JOINTS = {
     "claw":     (0, 10, 80),
-    "base":     (1, 8, 170),
+    "base":     (1, 0, 180),
     "shoulder": (2, 60, 120),
     "elbow":    (3, 50, 130),
 }
 
+# Pulse lengths (microseconds) that 0 and 180 degrees mean for each joint.
+# The base was calibrated on 2026-11-08: its hard stop is at about 600, it rests quietly at 650,
+# and it moves freely up to 2500. Uncalibrated joints use the common 600..2400.
+DEFAULT_PULSE_RANGE = (600, 2400)
+PULSE_RANGE = {
+    "base": (650, 2500),
+}
+
 ADDR = 0x40
+
+# Standard safe pulse range for hobby servos, in microseconds. Calibration pulses must stay inside it.
+MIN_PULSE_US = 500
+MAX_PULSE_US = 2500
+
+
+def check_pulse(us):
+    """Raise ValueError if a calibration pulse is outside the safe range. Doesn't touch the hardware."""
+    if not MIN_PULSE_US <= us <= MAX_PULSE_US:
+        raise ValueError(f"{us} microseconds is outside the safe range ({MIN_PULSE_US} to {MAX_PULSE_US}).")
 
 
 def check_angle(joint, angle):
@@ -33,13 +51,23 @@ class Arm:
         time.sleep(0.01)
         self.bus.write_byte_data(ADDR, 0x00, 0xA0)   # restart
 
-    def move(self, joint, angle):
-        check_angle(joint, angle)
+    def _write_pulse(self, joint, us):
         channel = JOINTS[joint][0]
-        us = 600 + angle / 180 * 1800                # 600..2400 microseconds
         ticks = int(us * 4096 / 20000)
         reg = 0x06 + 4 * channel
         self.bus.write_i2c_block_data(ADDR, reg, [0, 0, ticks & 0xFF, ticks >> 8])
+
+    def move(self, joint, angle):
+        check_angle(joint, angle)
+        low_us, high_us = PULSE_RANGE.get(joint, DEFAULT_PULSE_RANGE)
+        self._write_pulse(joint, low_us + angle / 180 * (high_us - low_us))
+
+    def move_pulse(self, joint, us):
+        """Calibration only: send an exact pulse length, within the safe range."""
+        if joint not in JOINTS:
+            raise ValueError(f"There's no joint called '{joint}'.")
+        check_pulse(us)
+        self._write_pulse(joint, us)
 
     def release(self, joint):
         channel = JOINTS[joint][0]

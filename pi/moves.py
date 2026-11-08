@@ -22,10 +22,10 @@ MOVES = {
         ("base", 90),
     ],
     "base_sweep": [
-        ("base", 10),
-        ("base", 170),
-        ("base", 10),
-        ("base", 170),
+        ("base", 0),
+        ("base", 180),
+        ("base", 0),
+        ("base", 180),
     ],
     "victory_dance": [
         ("claw", 10), ("claw", 80),

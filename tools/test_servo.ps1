@@ -6,10 +6,12 @@
 #   .\test_servo -Joint claw -Angles 45,60,30     your own angles
 #   .\test_servo -Joint claw -Delay 2             wait 2 seconds after each move
 #   .\test_servo -PiAddress 10.0.0.171            use an IP address instead of the name
+#   .\test_servo -Joint base -Pulses 1500,2400    calibration: exact pulse lengths (500-2500 microseconds)
 
 param(
     [string]$Joint = "claw",
     [string]$Angles = "",
+    [string]$Pulses = "",
     [string]$Delay = "1",
     [string]$PiAddress = "the-coolest-raspberry-pi.local",
     [string]$PiUser = "groot_the_builder"
@@ -24,6 +26,10 @@ if ($Angles -and $Angles -notmatch '^\d+(,\d+)*$') {
     Write-Host "Angles must be whole numbers with commas and no spaces, like 45,60,30. Nothing moved." -ForegroundColor Yellow
     exit 1
 }
+if ($Pulses -and $Pulses -notmatch '^\d+(,\d+)*$') {
+    Write-Host "Pulses must be whole numbers with commas and no spaces, like 1500,2400. Nothing moved." -ForegroundColor Yellow
+    exit 1
+}
 if ($Delay -notmatch '^\d+(\.\d+)?$') {
     Write-Host "Delay must be a number of seconds, like 1 or 0.5. Nothing moved." -ForegroundColor Yellow
     exit 1
@@ -32,6 +38,9 @@ if ($Delay -notmatch '^\d+(\.\d+)?$') {
 $Command = "cd ~/roboticArm && python3 -u servo_test.py --joint $Joint --delay $Delay"
 if ($Angles) {
     $Command += " --angles $Angles"
+}
+if ($Pulses) {
+    $Command += " --pulses $Pulses"
 }
 
 Write-Host "Testing $Joint on the Pi. Keep fingers clear. Press Ctrl+C to stop."
