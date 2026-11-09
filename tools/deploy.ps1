@@ -8,9 +8,11 @@
 
 param(
     [string]$Run = "",
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 # Pi OS packages the code needs. Add new ones to this list.
 $Packages = @("python3-smbus2")

@@ -9,9 +9,11 @@
 param(
     [string]$Move = "list",
     [string]$Delay = "",
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 # Only simple values are passed on to the Pi. The Pi checks the move and its limits.
 if ($Move -notmatch '^[A-Za-z0-9_]+$') {

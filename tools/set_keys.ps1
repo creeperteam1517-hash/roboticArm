@@ -5,9 +5,11 @@
 #   .\set_keys -PiAddress 10.0.0.171
 
 param(
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 ssh -t -o ConnectTimeout=10 "$PiUser@$PiAddress" "python3 ~/roboticArm/set_keys.py"
 if ($LASTEXITCODE -eq 255) {

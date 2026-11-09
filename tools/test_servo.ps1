@@ -13,9 +13,11 @@ param(
     [string]$Angles = "",
     [string]$Pulses = "",
     [string]$Delay = "1",
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 # Only simple values are passed on to the Pi. The Pi script checks the joint limits.
 if ($Joint -notin @("claw", "base", "shoulder", "elbow")) {

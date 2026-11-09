@@ -67,6 +67,8 @@ The commands below run on a Windows PC, from the project folder.
 
 The scripts use this project's Pi name and username by default. For a different Pi, add `-PiAddress <address>` and `-PiUser <username>` to any of these commands.
 
+If the Pi's name doesn't work on your network, put its address on the first line of a `pi_address.txt` file in the project folder. Every command then uses that address. The file isn't saved in git, because each network gives the Pi a different address.
+
 ## Jarvis chat page
 
 Jarvis is a page hosted on the Pi with routine buttons, joint sliders, a chat and a Stop button. The buttons work with no setup. Type to the chat, and it answers questions and moves the arm when you ask, speaking its replies aloud. On a phone or computer on the same network, open `http://<pi-address>:8000`. The Pi doesn't need a monitor, and loading the page doesn't move the arm.

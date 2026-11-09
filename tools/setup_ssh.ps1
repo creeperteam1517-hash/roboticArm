@@ -2,9 +2,11 @@
 # Safe to run again. It will not replace a key you already have.
 
 param(
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 $Target = "$PiUser@$PiAddress"
 $SshDir = Join-Path $HOME ".ssh"

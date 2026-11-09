@@ -5,9 +5,11 @@
 #   .\remote_token -PiAddress 10.0.0.171
 
 param(
-    [string]$PiAddress = "the-coolest-raspberry-pi.local",
+    [string]$PiAddress = "",
     [string]$PiUser = "groot_the_builder"
 )
+
+. (Join-Path $PSScriptRoot "pi_address.ps1")
 
 ssh -t -o ConnectTimeout=10 "$PiUser@$PiAddress" "cd ~/roboticArm && python3 remote_token.py"
 if ($LASTEXITCODE -eq 255) {
