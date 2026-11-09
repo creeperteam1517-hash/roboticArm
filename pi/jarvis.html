@@ -299,32 +299,37 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
     try { speechSynthesis.cancel(); } catch {}
     setSpeaking(false);
   }
-  function backupVoice(text) {
-    if (!("speechSynthesis" in window)) return;
+  function backupVoice(text, begin) {
+    begin = begin || (() => {});
+    if (!("speechSynthesis" in window)) return begin();
     const voices = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
     const british = voices.filter((v) => /en[-_]GB/i.test(v.lang));
     const pick = british.find((v) => /george|daniel|arthur|male|ryan|oliver/i.test(v.name)) || british[0] || voices[0];
     const line = new SpeechSynthesisUtterance(text);
     if (pick) line.voice = pick;
     line.lang = pick ? pick.lang : "en-GB";
-    line.onstart = () => setSpeaking(true);
-    line.onend = line.onerror = () => setSpeaking(false);
+    line.onstart = () => { setSpeaking(true); begin(); };
+    line.onend = line.onerror = () => { setSpeaking(false); begin(); };
     speechSynthesis.speak(line);
+    setTimeout(begin, 3000);   // some browsers never fire onstart
   }
-  async function say(text) {
-    if (!voiceOn || !text) return;
+  // onStart runs once, as soon as Jarvis starts talking (or straight away if it can't talk).
+  async function say(text, onStart) {
+    let started = false;
+    const begin = () => { if (!started) { started = true; if (onStart) onStart(); } };
+    if (!voiceOn || !text) return begin();
     stopTalking();
     if (state && state.voice_ready) {
       try {
         const url = URL.createObjectURL(await (await post("/api/speak", { text })).blob());
         audio = new Audio(url);
-        audio.onplay = () => setSpeaking(true);
-        audio.onended = audio.onerror = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+        audio.onplay = () => { setSpeaking(true); begin(); };
+        audio.onended = audio.onerror = () => { setSpeaking(false); URL.revokeObjectURL(url); begin(); };
         await audio.play();
         return;
       } catch {}
     }
-    backupVoice(text);
+    backupVoice(text, begin);
   }
   $("hush").onclick = stopTalking;
   $("voice").onclick = () => {
@@ -349,7 +354,7 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
       body.textContent = data.reply;
       addActions(pending, data.actions);
       logEl.scrollTop = logEl.scrollHeight;
-      say(data.reply);
+      say(data.reply, data.queued ? () => post("/api/chat/go").catch(() => {}) : null);
     } catch (problem) {
       pending.classList.add("err");
       body.classList.remove("dots");

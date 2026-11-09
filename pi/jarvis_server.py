@@ -232,7 +232,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(text, str):
                     raise ValueError("Type a message first.")
                 reply, actions, fresh = chat.send(text)
-                self._json(200, {"reply": reply, "actions": actions, "fresh_start": fresh})
+                self._json(200, {"reply": reply, "actions": actions, "fresh_start": fresh, "queued": chat.has_queued()})
+            elif self.path == "/api/chat/go":
+                chat.go()
+                self._json(200, {"ok": True})
             elif self.path == "/api/chat/reset":
                 chat.reset()
                 self._json(200, {"ok": True})
@@ -254,6 +257,7 @@ class Handler(BaseHTTPRequestHandler):
                 jarvis.set_joint(joint, angle)
                 self._json(200, jarvis.state())
             elif self.path == "/api/stop":
+                chat.cancel_queued()
                 jarvis.stop()
                 self._json(200, jarvis.state())
             elif self.path in ("/api/tasks/toggle", "/api/tasks/remove", "/api/reminders/remove"):

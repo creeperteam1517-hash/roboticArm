@@ -146,6 +146,7 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing).
 - 2026-11-09: added 15 more claw and base moves: nod, shake_head, look_left, look_right, scan, pendulum, sleepy, snap, chomp, drum_roll, grab, release, high_five, spin_and_snap and party. All angles are inside the limits, but none have run on the real arm yet. To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
 - claude.ai Jarvis version 44 (2026-11-09): the Robot tab and its chat tool have all 20 routines. Jarvis always says "sir" there too (it no longer switches to "ma'am" based on memory). The Pi already accepts the new routines through the remote entrance.
+- 2026-11-09: Pi Jarvis chat now holds arm moves until the reply starts playing (the page calls /api/chat/go when the voice starts). The moves start anyway after 6 seconds if the page never calls, and straight away if the voice is off. Stop cancels a held move. Tried on the real arm, and it speaks as the arm moves.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.

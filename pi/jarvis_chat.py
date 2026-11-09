@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from arm import JOINTS
+from arm import JOINTS, check_angle
 from moves import DELAYS, MOVES
 
 MODEL = "claude-sonnet-5-5"   # my choice: about half the cost of Opus
@@ -22,6 +22,10 @@ MAX_MESSAGE_CHARS = 2000
 MAX_SPEECH_CHARS = 1500
 
 # The chat is saved here, so refreshing the page or restarting Jarvis keeps it.
+
+# Arm moves from chat wait until Jarvis starts speaking its reply, so it talks before the move is over.
+# If the page never says it's speaking (closed, or voice broken), they start anyway after this long.
+GO_FALLBACK_SECONDS = 6
 CHAT_FILE = Path(os.environ.get("JARVIS_CHAT", Path.home() / ".local" / "share" / "jarvis" / "chat.json"))
 CHAT_JOINTS = ["claw", "base"]   # shoulder and elbow are untested, so chat can't move them yet
 
@@ -77,6 +81,7 @@ ARM_RULES = f"""ROBOT ARM: you control the user's 3D-printed robot arm (an EEZYb
 - move_joint sets one joint to an angle: {_limits()}. Angles outside these are refused. To move both, call move_joint twice in the same turn. Nobody has confirmed which claw angle is open and which is closed.
 - The shoulder and elbow aren't tested yet, so you can't move them. Say so if asked.
 - If the user says stop, use stop_arm at once. Stop relaxes all servos.
+- Arm moves start the moment your reply begins playing, so talk as if it's happening now ("Clapping now, sir.").
 - You can't see the arm and the servos give no feedback. A tool result only means the command was sent: say it was sent and ask the user to watch, never that it definitely moved. If they say nothing happened, suggest checking the arm's 6V servo power.
 - When you move the arm, begin your reply with one short acknowledgement such as "Right away, sir.", "Very well, sir.", "Consider it done, sir." or "Certainly, sir.", varying it each time, then say what was sent. Remind them to keep hands clear before big movements."""
 
@@ -122,7 +127,58 @@ class Chat:
         self.user_turns = 0
         self.transcript = []   # what the page shows: {"role": "you" or "ai", "text", "actions"}
         self.client = None
+        self.queued = []       # arm moves waiting for the reply to start playing
+        self.queue_lock = threading.Lock()
+        self.go_timer = None
         self._load()
+
+    def _check_idle(self):
+        running = self.jarvis.state()["running"]
+        if running:
+            raise ValueError(f"Jarvis is already running {running}. Wait for it, or say stop.")
+
+    def _queue(self, start):
+        with self.queue_lock:
+            self.queued.append(start)
+
+    def has_queued(self):
+        with self.queue_lock:
+            return bool(self.queued)
+
+    def cancel_queued(self):
+        with self.queue_lock:
+            self.queued = []
+            if self.go_timer:
+                self.go_timer.cancel()
+                self.go_timer = None
+
+    def _arm_fallback(self):
+        with self.queue_lock:
+            if self.queued and not self.go_timer:
+                self.go_timer = threading.Timer(GO_FALLBACK_SECONDS, self.go)
+                self.go_timer.daemon = True
+                self.go_timer.start()
+
+    def go(self):
+        """Start the queued arm moves, one after another. The page calls this when Jarvis starts speaking."""
+        with self.queue_lock:
+            starts, self.queued = self.queued, []
+            if self.go_timer:
+                self.go_timer.cancel()
+                self.go_timer = None
+        if starts:
+            threading.Thread(target=self._run_queued, args=(starts,), daemon=True).start()
+
+    def _run_queued(self, starts):
+        for start in starts:
+            for _ in range(600):   # wait up to a minute for the previous move to finish
+                if not self.jarvis.state()["running"]:
+                    break
+                time.sleep(0.1)
+            try:
+                start()
+            except (ValueError, *self.hardware_errors) as problem:
+                print(f"Queued arm move didn't start: {problem}")
 
     def _load(self):
         """Pick up the saved chat. Claude gets it back as plain text turns."""
@@ -160,6 +216,7 @@ class Chat:
         self.transcript.append({"role": "you", "text": text})
         self.transcript.append({"role": "ai", "text": reply, "actions": actions})
         self._save()
+        self._arm_fallback()
         return reply, actions, fresh_start
 
     def history(self):
@@ -167,6 +224,7 @@ class Chat:
             return [dict(m) for m in self.transcript]
 
     def reset(self):
+        self.cancel_queued()
         with self.lock:
             self.messages = []
             self.user_turns = 0
@@ -188,18 +246,26 @@ class Chat:
         try:
             if name == "run_routine":
                 routine = args.get("routine")
-                self.jarvis.start_move(routine)
+                if routine not in MOVES:
+                    return f"There's no routine called {routine}.", True, False
+                for joint, angle in MOVES[routine]:
+                    check_angle(joint, angle)
+                self._check_idle()
+                self._queue(lambda: self.jarvis.start_move(routine))
                 seconds = round(len(MOVES[routine]) * DELAYS.get(routine, 1.0))
-                return f"Command sent: {routine} started, about {seconds} seconds. You can't see whether the arm moved.", False, True
+                return f"Command sent: {routine} starts as your reply begins, about {seconds} seconds. You can't see whether the arm moved.", False, True
             if name == "move_joint":
                 joint, angle = args.get("joint"), args.get("angle")
                 if joint not in CHAT_JOINTS:
                     return f"{joint} can't be moved from chat yet because it hasn't been tested.", True, False
                 if type(angle) is not int:
                     return "The angle must be a whole number.", True, False
-                self.jarvis.set_joint(joint, angle)
-                return f"Command sent: {joint} to {angle} degrees. It relaxes after 10 seconds.", False, True
+                check_angle(joint, angle)
+                self._check_idle()
+                self._queue(lambda: self.jarvis.set_joint(joint, angle))
+                return f"Command sent: {joint} to {angle} degrees, as your reply begins. It relaxes after 10 seconds.", False, True
             if name == "stop_arm":
+                self.cancel_queued()
                 self.jarvis.stop()
                 return "Stopped. All servos are relaxed.", False, False
             if name == "arm_status":
@@ -238,6 +304,7 @@ class Chat:
             raise ValueError("That message is too long.")
         if not self.lock.acquire(blocking=False):
             raise ChatBusy("Jarvis is still answering your last message.")
+        self.cancel_queued()
         try:
             import anthropic
 
@@ -295,6 +362,9 @@ class Chat:
                 del self.messages[saved:]
                 self.user_turns -= 1
                 raise ChatUnavailable(f"Claude returned an error ({problem.status_code}). Try again.")
+        except BaseException:
+            self.cancel_queued()   # no reply, so don't move the arm
+            raise
         finally:
             self.lock.release()
 
