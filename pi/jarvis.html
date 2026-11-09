@@ -270,6 +270,23 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
     logEl.append(d); logEl.scrollTop = logEl.scrollHeight;
     return d;
   }
+  function addActions(d, actions) {
+    if (!actions || !actions.length) return;
+    const a = document.createElement("div"); a.className = "acts"; a.textContent = "✓ " + actions.join(" · "); d.append(a);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  async function showHistory() {
+    try {
+      const r = await fetch("/api/chat/history", { cache: "no-store" });
+      const { messages } = r.ok ? await r.json() : { messages: [] };
+      if (messages.length) {
+        $("chips").hidden = true;
+        for (const m of messages) addActions(addMessage(m.role, m.text), m.actions);
+        return;
+      }
+    } catch {}
+    greet();
+  }
   function greet() {
     const h = new Date().getHours();
     addMessage("ai", `Good ${h < 12 ? "morning" : h < 18 ? "afternoon" : "evening"}. All systems online and standing by. Ask me anything, give me tasks or reminders, or tell me what the arm should do.`);
@@ -330,9 +347,7 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
       if (data.fresh_start) addMessage("note", "Started a fresh chat to keep things quick.");
       body.classList.remove("dots");
       body.textContent = data.reply;
-      if (data.actions.length) {
-        const a = document.createElement("div"); a.className = "acts"; a.textContent = "✓ " + data.actions.join(" · "); pending.append(a);
-      }
+      addActions(pending, data.actions);
       logEl.scrollTop = logEl.scrollHeight;
       say(data.reply);
     } catch (problem) {
@@ -545,7 +560,7 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
   }
 
   /* ---------- start ---------- */
-  greet();
+  showHistory();
   tick(); setInterval(tick, 1000);
   requestAnimationFrame(drawOrb);
   poll(); pollAssistant();

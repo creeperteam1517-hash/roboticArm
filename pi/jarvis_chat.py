@@ -10,6 +10,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 from arm import JOINTS
 from moves import DELAYS, MOVES
@@ -19,6 +20,9 @@ MAX_TOOL_ROUNDS = 8
 MAX_USER_TURNS = 30          # start a fresh chat after this many messages, instead of editing old turns
 MAX_MESSAGE_CHARS = 2000
 MAX_SPEECH_CHARS = 1500
+
+# The chat is saved here, so refreshing the page or restarting Jarvis keeps it.
+CHAT_FILE = Path(os.environ.get("JARVIS_CHAT", Path.home() / ".local" / "share" / "jarvis" / "chat.json"))
 CHAT_JOINTS = ["claw", "base"]   # shoulder and elbow are untested, so chat can't move them yet
 
 GEORGE_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
@@ -116,12 +120,58 @@ class Chat:
         self.lock = threading.Lock()
         self.messages = []
         self.user_turns = 0
+        self.transcript = []   # what the page shows: {"role": "you" or "ai", "text", "actions"}
         self.client = None
+        self._load()
+
+    def _load(self):
+        """Pick up the saved chat. Claude gets it back as plain text turns."""
+        try:
+            saved = json.loads(CHAT_FILE.read_text(encoding="utf-8"))
+            transcript = [m for m in saved.get("transcript", [])
+                          if m.get("role") in ("you", "ai") and isinstance(m.get("text"), str)]
+        except (OSError, ValueError, AttributeError):
+            return
+        # Turns are saved in pairs, but drop a lone message at either end so turns still alternate.
+        if transcript and transcript[0]["role"] != "you":
+            transcript = transcript[1:]
+        if transcript and transcript[-1]["role"] != "ai":
+            transcript = transcript[:-1]
+        self.transcript = transcript
+        for m in transcript:
+            if m["role"] == "you":
+                self.messages.append({"role": "user", "content": m["text"]})
+            else:
+                done = " · ".join(m.get("actions") or [])
+                self.messages.append({"role": "assistant", "content": m["text"] + (f"\n[Done: {done}]" if done else "")})
+        self.user_turns = sum(1 for m in transcript if m["role"] == "you")
+
+    def _save(self):
+        try:
+            CHAT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            tmp = CHAT_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps({"transcript": self.transcript}, indent=1), encoding="utf-8")
+            os.replace(tmp, CHAT_FILE)
+        except OSError as problem:
+            print(f"Couldn't save the chat: {problem}")
+
+    def _finish(self, text, reply, actions, fresh_start):
+        """Record a finished exchange for the page, save it, and pass the reply on."""
+        self.transcript.append({"role": "you", "text": text})
+        self.transcript.append({"role": "ai", "text": reply, "actions": actions})
+        self._save()
+        return reply, actions, fresh_start
+
+    def history(self):
+        with self.lock:
+            return [dict(m) for m in self.transcript]
 
     def reset(self):
         with self.lock:
             self.messages = []
             self.user_turns = 0
+            self.transcript = []
+            self._save()
 
     def _client(self):
         if self.client is None:
@@ -194,6 +244,7 @@ class Chat:
             fresh_start = False
             if self.user_turns >= MAX_USER_TURNS:
                 self.messages, self.user_turns, fresh_start = [], 0, True
+                self.transcript = []
             saved = len(self.messages)
             self.messages.append({"role": "user", "content": text})
             self.user_turns += 1
@@ -212,14 +263,14 @@ class Chat:
                     )
                     self.messages.append({"role": "assistant", "content": response.content})
                     if response.stop_reason == "refusal":
-                        return "I'm afraid I can't help with that one.", actions, fresh_start
+                        return self._finish(text, "I'm afraid I can't help with that one.", actions, fresh_start)
                     if response.stop_reason == "pause_turn":
                         continue   # a web search is still going; ask Claude to carry on
                     tool_uses = [b for b in response.content if b.type == "tool_use"]
                     if response.stop_reason != "tool_use" or not tool_uses:
                         # Text arrives in pieces when it cites search results, so join without spaces.
                         reply = "".join(b.text for b in response.content if b.type == "text").strip()
-                        return reply or "Done.", actions, fresh_start
+                        return self._finish(text, reply or "Done.", actions, fresh_start)
                     results = []
                     for block in tool_uses:
                         result, is_error, _ = self._run_tool(block.name, block.input)
@@ -227,7 +278,7 @@ class Chat:
                         results.append({"type": "tool_result", "tool_use_id": block.id,
                                         "content": result, "is_error": is_error})
                     self.messages.append({"role": "user", "content": results})
-                return "That took more steps than I allow myself. Please try asking again more simply.", actions, fresh_start
+                return self._finish(text, "That took more steps than I allow myself. Please try asking again more simply.", actions, fresh_start)
             except anthropic.AuthenticationError:
                 del self.messages[saved:]
                 self.user_turns -= 1

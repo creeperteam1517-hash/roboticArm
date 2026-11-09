@@ -194,6 +194,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, jarvis.state())
         elif self.path == "/api/assistant":
             self._json(200, store.snapshot())
+        elif self.path == "/api/chat/history":
+            self._json(200, {"messages": chat.history()})
         else:
             self._json(404, {"error": "Not found."})
 
