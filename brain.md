@@ -143,7 +143,8 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - pi/moves.py holds the named moves. To add one, add a name and its (joint, angle) steps, then run `.\deploy`.
 - `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
 - `.\arm claw_wiggle` moved the real claw on 2026-11-06.
-- Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing). To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
+- Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing).
+- 2026-11-09: added 15 more claw and base moves: nod, shake_head, look_left, look_right, scan, pendulum, sleepy, snap, chomp, drum_roll, grab, release, high_five, spin_and_snap and party. All angles are inside the limits, but none have run on the real arm yet. To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 
 The claw servo goes on channel 0: orange/yellow wire on the yellow pin, red in the middle, brown/black on the black pin. 6V supply on.
