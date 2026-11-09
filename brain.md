@@ -73,6 +73,8 @@
 4. Run `.\arm` to list the moves. This doesn't move the arm, and it proves the login works.
 - The computer and the Pi must be on the same network, unless Tailscale is set up.
 - The scripts don't run on Mac or Linux. Claude would need to write versions for that system.
+- 2026-11-09: set up a second Windows PC. It's on the "Livin" Wi-Fi (addresses start with 192.168.50.), and the Pi's name didn't work there. On the Pi's own screen and keyboard, I joined the Pi to Livin with `sudo nmcli dev wifi connect "Livin" password "<password>"`. It got 192.168.50.78. Then `.\setup_ssh -PiAddress 192.168.50.78` worked, and `.\arm -PiAddress 192.168.50.78` listed the moves. On Livin, add `-PiAddress 192.168.50.78` to every command. The Pi still remembers the home Wi-Fi (10.0.0.171).
+- The same day, claude.ai Jarvis's Check failed with an SSL "UNEXPECTED_EOF" error from the Funnel address. That means Tailscale's relay couldn't reach the Pi (the Pi was offline from Tailscale), not a Jarvis bug. Not re-checked since the Pi joined Livin.
 
 ## MOVING THE PI TO A NEW LOCATION
 - The Pi only joins Wi-Fi it already knows, and I may not have a screen there. Before leaving, add the new Wi-Fi details, or a phone hotspot as a backup.
