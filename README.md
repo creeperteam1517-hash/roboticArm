@@ -26,10 +26,10 @@ This is a work in progress.
 |---|---|---|
 | Claw | 0 | 10 to 80 |
 | Base | 1 | 0 to 180 (calibrated) |
-| Shoulder | 2 | 60 to 120 |
+| Shoulder | 2 | 0 to 60 |
 | Elbow | 3 | 50 to 130 |
 
-Only the claw and base ranges have been tried on real hardware. The shoulder and elbow limits still need measuring.
+The claw, base and shoulder ranges have been tried on real hardware. The elbow limits still need measuring.
 
 ### Wiring
 

@@ -16,7 +16,7 @@ from arm import Arm, JOINTS, check_angle, check_pulse
 DEFAULT_ANGLES = {
     "claw":     [45, 60, 45, 30, 45],
     "base":     [90, 105, 90, 75, 90],
-    "shoulder": [90, 105, 90, 75, 90],
+    "shoulder": [30, 40, 30, 20, 30],
     "elbow":    [90, 105, 90, 75, 90],
 }
 MIN_DELAY = 0.2

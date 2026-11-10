@@ -19,7 +19,7 @@
   - base on channel 1
   - shoulder on channel 2
   - elbow on channel 3
-- Old joint limits (degrees): base 10-170, claw 10-80, shoulder 60-120, elbow 50-130
+- Old joint limits (degrees): base 10-170, claw 10-80, shoulder 60-120 (now 0-60), elbow 50-130
 - Servo power: 6V DC wall supply (black, green screw-terminal plug, no +/- marks)
   - Path: supply + -> 5A fuse in an inline holder -> PCA9685 V+ (right screw)
   - Supply - -> PCA9685 GND (left screw)
@@ -49,7 +49,7 @@
 - 2026-11-08 base calibration (exact pulses with `.\test_servo -Joint base -Pulses ...`, me watching): moved freely at 2300, 2400 and 2500 microseconds (the top of the safe range), hit its hard stop at 600, and rested quietly at 650. pi/arm.py now maps base 0..180 degrees to 650..2500 microseconds (PULSE_RANGE), and the base limits are 0 to 180. base_sweep now uses 0 and 180. The old 600..2400 mapping only used part of the base's travel, which is why 10 to 170 looked like much less than 160 degrees. The claw, shoulder and elbow still use 600..2400 and aren't calibrated. The claude.ai Jarvis Robot tab is updated to base 0..180 too (version 43, which also keeps the speaking speed and pitch settings added in version 42). Confirmed: base_sweep (0, 180, 0, 180) gave a full swing with no strain.
 - Older note: the base's lowest limit in pi/arm.py was 8, confirmed with no strain on 2026-11-07. A move to 6 ran, but I didn't report how it looked. A try at 0 showed no movement, so 0 is unconfirmed. I remember reaching 0 before.
 - On 2026-11-07 the Pi stopped answering on the network, and restarting it fixed that. Cause unknown. The Pi's .local name also only works some of the time, so use `-PiAddress 10.0.0.171` if it fails.
-- Not done: shoulder and elbow haven't been tested.
+- Not done: elbow hasn't been tested. The shoulder servo was fitted to the arm at servo 0, so its limits are now 0-60 (stepped 0 to 60 smoothly on 2026-11-09). Nod uses the shoulder (20-40, settles at 30). Chat still can't move the shoulder to an angle.
 - Old servos may have been stressed by the earlier reverse-polarity incident, so test each one.
 
 ## CURRENT BLOCKER
@@ -144,8 +144,8 @@ Add `-PiAddress 10.0.0.171` if the name doesn't work. If the script has changed,
 - `.\arm` lists the moves. `.\arm claw_wiggle` runs one and can move the arm. `-Delay 2` waits longer after each step.
 - `.\arm claw_wiggle` moved the real claw on 2026-11-06.
 - Moves so far are `claw_wiggle`, `clap` (claw 10 to 80, five times), `wave` and `base_sweep` (base), and `victory_dance` (three claps, then a base swing).
-- 2026-11-09: added 15 more claw and base moves: nod, shake_head, look_left, look_right, scan, pendulum, sleepy, snap, chomp, drum_roll, grab, release, high_five, spin_and_snap and party. All angles are inside the limits, but none have run on the real arm yet. To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. There's no smooth motion yet.
-- claude.ai Jarvis version 44 (2026-11-09): the Robot tab and its chat tool have all 20 routines. Jarvis always says "sir" there too (it no longer switches to "ma'am" based on memory). The Pi already accepts the new routines through the remote entrance.
+- 2026-11-09: added 15 more claw and base moves: nod, shake_head, look_left, look_right, scan, pendulum, sleepy, snap, chomp, drum_roll, grab, release, high_five, spin_and_snap and party. All angles are inside the limits, but none have run on the real arm yet. To add a move, change pi/moves.py and run `.\deploy`. Its button appears on the Jarvis page, and chat can use it straight away. Shoulder and elbow haven't been tested, so they have no moves yet. Smooth motion was added on 2026-11-09: joints glide about 3 degrees every 10 ms (a full sweep takes about 0.6 s) (GLIDE_STEP_US in pi/arm.py). The first move after a joint relaxes still jumps.
+- claude.ai Jarvis version 45 (2026-11-09): the Robot tab and its chat tool have all 20 routines. Jarvis always says "sir" there too (it no longer switches to "ma'am" based on memory). The Pi already accepts the new routines through the remote entrance.
 - 2026-11-09: Pi Jarvis chat now holds arm moves until the reply starts playing (the page calls /api/chat/go when the voice starts). The moves start anyway after 6 seconds if the page never calls, and straight away if the voice is off. Stop cancels a held move. Tried on the real arm, and it speaks as the arm moves.
 - Possible later addition: a Claude skill that runs these moves, only when I ask for it directly.
 

@@ -4,7 +4,7 @@
 JOINTS = {
     "claw":     (0, 10, 80),
     "base":     (1, 0, 180),
-    "shoulder": (2, 60, 120),
+    "shoulder": (2, 0, 60),     # fitted at servo 0; 0-60 checked by eye on 2026-11-09
     "elbow":    (3, 50, 130),
 }
 
@@ -21,6 +21,12 @@ ADDR = 0x40
 # Standard safe pulse range for hobby servos, in microseconds. Calibration pulses must stay inside it.
 MIN_PULSE_US = 500
 MAX_PULSE_US = 2500
+
+# Smooth motion: a joint glides to its new position in small steps instead of jumping.
+# 30 microseconds is about 3 degrees, so a full 180-degree sweep takes about 0.6 seconds.
+# The first move after a joint has been relaxed still jumps, because its position isn't known.
+GLIDE_STEP_US = 30
+GLIDE_STEP_SECONDS = 0.01
 
 
 def check_pulse(us):
@@ -50,6 +56,7 @@ class Arm:
         self.bus.write_byte_data(ADDR, 0x00, 0x20)   # wake up
         time.sleep(0.01)
         self.bus.write_byte_data(ADDR, 0x00, 0xA0)   # restart
+        self.pulse_now = {}   # last pulse sent to each joint that is still powered
 
     def _write_pulse(self, joint, us):
         channel = JOINTS[joint][0]
@@ -57,19 +64,34 @@ class Arm:
         reg = 0x06 + 4 * channel
         self.bus.write_i2c_block_data(ADDR, reg, [0, 0, ticks & 0xFF, ticks >> 8])
 
+    def _glide(self, joint, target_us):
+        """Move to target_us in small steps from the last known position, so the motion is smooth."""
+        import time
+
+        start = self.pulse_now.get(joint)
+        if start is not None:
+            steps = int(abs(target_us - start) // GLIDE_STEP_US)
+            direction = 1 if target_us > start else -1
+            for i in range(1, steps + 1):
+                self._write_pulse(joint, start + direction * i * GLIDE_STEP_US)
+                time.sleep(GLIDE_STEP_SECONDS)
+        self._write_pulse(joint, target_us)
+        self.pulse_now[joint] = target_us
+
     def move(self, joint, angle):
         check_angle(joint, angle)
         low_us, high_us = PULSE_RANGE.get(joint, DEFAULT_PULSE_RANGE)
-        self._write_pulse(joint, low_us + angle / 180 * (high_us - low_us))
+        self._glide(joint, low_us + angle / 180 * (high_us - low_us))
 
     def move_pulse(self, joint, us):
         """Calibration only: send an exact pulse length, within the safe range."""
         if joint not in JOINTS:
             raise ValueError(f"There's no joint called '{joint}'.")
         check_pulse(us)
-        self._write_pulse(joint, us)
+        self._glide(joint, us)
 
     def release(self, joint):
         channel = JOINTS[joint][0]
         reg = 0x06 + 4 * channel
         self.bus.write_i2c_block_data(ADDR, reg, [0, 0, 0, 0x10])   # power off
+        self.pulse_now.pop(joint, None)

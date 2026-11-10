@@ -37,9 +37,9 @@ MOVES = {
         ("base", 90),
     ],
     "nod": [
-        ("base", 80), ("base", 100),
-        ("base", 80), ("base", 100),
-        ("base", 90),
+        ("shoulder", 20), ("shoulder", 40),
+        ("shoulder", 20), ("shoulder", 40),
+        ("shoulder", 30),
     ],
     "shake_head": [
         ("base", 60), ("base", 120),
