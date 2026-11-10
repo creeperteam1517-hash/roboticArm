@@ -121,6 +121,65 @@ MOVES = {
         ("base", 90),
         ("claw", 10),
     ],
+    "stretch": [
+        ("shoulder", 10), ("claw", 80),
+        ("shoulder", 50),
+        ("shoulder", 30), ("claw", 45),
+    ],
+    "bounce": [
+        ("shoulder", 25), ("shoulder", 35),
+        ("shoulder", 25), ("shoulder", 35),
+        ("shoulder", 25), ("shoulder", 35),
+        ("shoulder", 30),
+    ],
+    "big_wave": [
+        ("shoulder", 40),
+        ("base", 60), ("base", 120),
+        ("base", 60), ("base", 120),
+        ("base", 90), ("shoulder", 30),
+    ],
+    "pick_up": [
+        ("claw", 80),
+        ("shoulder", 10),
+        ("claw", 15),
+        ("shoulder", 40),
+    ],
+    "put_down": [
+        ("shoulder", 10),
+        ("claw", 80),
+        ("shoulder", 40),
+        ("claw", 45),
+    ],
+    "salute": [
+        ("shoulder", 50),
+        ("claw", 10), ("claw", 80), ("claw", 45),
+        ("shoulder", 30),
+    ],
+    "look_around": [
+        ("base", 45), ("shoulder", 45),
+        ("base", 135), ("shoulder", 15),
+        ("base", 90), ("shoulder", 30),
+    ],
+    "wake_up": [
+        ("shoulder", 5),
+        ("shoulder", 15),
+        ("shoulder", 30),
+        ("claw", 80), ("claw", 45),
+        ("base", 75), ("base", 105), ("base", 90),
+    ],
+    "dance": [
+        ("base", 60), ("shoulder", 20), ("claw", 80),
+        ("base", 120), ("shoulder", 40), ("claw", 10),
+        ("base", 60), ("shoulder", 20), ("claw", 80),
+        ("base", 120), ("shoulder", 40), ("claw", 10),
+        ("base", 90), ("shoulder", 30), ("claw", 45),
+    ],
+    "reach": [
+        ("shoulder", 55),
+        ("claw", 80),
+        ("claw", 15),
+        ("shoulder", 30),
+    ],
 }
 
 # Seconds to wait after each step, for moves that don't use the normal 1 second.
@@ -136,4 +195,8 @@ DELAYS = {
     "spin_and_snap": 0.8,
     "party": 0.6,
     "sleepy": 1.5,
+    "bounce": 0.4,
+    "big_wave": 0.8,
+    "wake_up": 1.2,
+    "dance": 0.5,
 }

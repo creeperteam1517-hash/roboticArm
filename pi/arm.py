@@ -5,7 +5,7 @@ JOINTS = {
     "claw":     (0, 10, 80),
     "base":     (1, 0, 180),
     "shoulder": (2, 0, 60),     # fitted at servo 0; 0-60 checked by eye on 2026-11-09
-    "elbow":    (3, 50, 130),
+    "elbow":    (3, 50, 130),    # low limit 50 confirmed on the arm on 2026-11-10
 }
 
 # Pulse lengths (microseconds) that 0 and 180 degrees mean for each joint.
@@ -26,6 +26,7 @@ MAX_PULSE_US = 2500
 # 30 microseconds is about 3 degrees, so a full 180-degree sweep takes about 0.6 seconds.
 # The first move after a joint has been relaxed still jumps, because its position isn't known.
 GLIDE_STEP_US = 30
+GLIDE_STEP_US_BY_JOINT = {"shoulder": 15}   # the shoulder glides at half speed
 GLIDE_STEP_SECONDS = 0.01
 
 
@@ -70,10 +71,11 @@ class Arm:
 
         start = self.pulse_now.get(joint)
         if start is not None:
-            steps = int(abs(target_us - start) // GLIDE_STEP_US)
+            step_us = GLIDE_STEP_US_BY_JOINT.get(joint, GLIDE_STEP_US)
+            steps = int(abs(target_us - start) // step_us)
             direction = 1 if target_us > start else -1
             for i in range(1, steps + 1):
-                self._write_pulse(joint, start + direction * i * GLIDE_STEP_US)
+                self._write_pulse(joint, start + direction * i * step_us)
                 time.sleep(GLIDE_STEP_SECONDS)
         self._write_pulse(joint, target_us)
         self.pulse_now[joint] = target_us

@@ -27,7 +27,7 @@ TAILSCALE_HOST = os.environ.get("JARVIS_TS_HOST", "the-coolest-raspberry-pi.tail
 
 DEFAULT_DELAY = 1.0
 HOLD_SECONDS = 10         # a slider or chat position relaxes after this long, so servos don't strain
-TESTED_JOINTS = {"claw", "base"}   # the page locks the others until unlocked
+TESTED_JOINTS = {"claw", "base", "shoulder", "elbow"}   # the page locks any others until unlocked
 MAX_BODY_BYTES = 8192
 
 

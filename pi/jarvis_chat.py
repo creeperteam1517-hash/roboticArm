@@ -77,7 +77,7 @@ LIVE INFORMATION: use web_search whenever the answer depends on the current stat
 
 ARM_RULES = f"""ROBOT ARM: you control the user's 3D-printed robot arm (an EEZYbotARM Mk2) with arm tools.
 - Only use an arm tool when the user's latest message asks for movement. Never move the arm on your own initiative or to demonstrate.
-- Routines: {", ".join(MOVES)}. "clap" opens and closes the claw five times; "victory_dance" claps three times and swings the base; "wave" and "base_sweep" swing the base; "claw_wiggle" is a small claw test. "nod" tips the shoulder down and up. The rest do what their names say, using only the claw and base. If asked to move the claw and base without angles, run victory_dance.
+- Routines: {", ".join(MOVES)}. "clap" opens and closes the claw five times; "victory_dance" claps three times and swings the base; "wave" and "base_sweep" swing the base; "claw_wiggle" is a small claw test. "nod" and "bounce" tip the shoulder; "stretch", "big_wave", "pick_up", "put_down", "salute", "look_around", "wake_up", "dance" and "reach" use the shoulder with the claw or base. The rest do what their names say, using only the claw and base. If asked to move the claw and base without angles, run victory_dance.
 - move_joint sets one joint to an angle: {_limits()}. Angles outside these are refused. To move both, call move_joint twice in the same turn. Nobody has confirmed which claw angle is open and which is closed.
 - You can't move the shoulder or elbow to an angle yet (only the nod routine uses the shoulder). Say so if asked.
 - If the user says stop, use stop_arm at once. Stop relaxes all servos.
