@@ -550,7 +550,7 @@ textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--
       ui.s.disabled = !online || running || !(joint.tested || unlocked.has(joint.name));
       if (dragging.has(joint.name)) continue;
       if (joint.last_angle !== null) { ui.s.value = joint.last_angle; ui.v.textContent = `${joint.last_angle}°`; }
-      ui.note.textContent = joint.held ? `holding, relaxes in ${state.hold_seconds}s` : joint.last_angle === null ? "not moved yet" : "relaxed";
+      ui.note.textContent = joint.held ? (joint.keep_powered ? "holding until Stop" : `holding, relaxes in ${state.hold_seconds}s`) : joint.last_angle === null ? "not moved yet" : "relaxed";
     }
   }
   async function poll() {

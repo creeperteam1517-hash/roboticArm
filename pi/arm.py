@@ -5,7 +5,7 @@ JOINTS = {
     "claw":     (0, 10, 80),
     "base":     (1, 0, 180),
     "shoulder": (2, 0, 60),     # fitted at servo 0; 0-60 checked by eye on 2026-11-09
-    "elbow":    (3, 50, 130),    # low limit 50 confirmed on the arm on 2026-11-10
+    "elbow":    (3, 50, 130),    # 50-130 confirmed on the arm on 2026-11-10
 }
 
 # Pulse lengths (microseconds) that 0 and 180 degrees mean for each joint.

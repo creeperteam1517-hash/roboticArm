@@ -6,6 +6,7 @@ They are never stored in this project or sent to the browser.
 """
 import json
 import os
+import sys
 import threading
 import time
 import urllib.error
@@ -27,7 +28,7 @@ MAX_SPEECH_CHARS = 1500
 # If the page never says it's speaking (closed, or voice broken), they start anyway after this long.
 GO_FALLBACK_SECONDS = 6
 CHAT_FILE = Path(os.environ.get("JARVIS_CHAT", Path.home() / ".local" / "share" / "jarvis" / "chat.json"))
-CHAT_JOINTS = ["claw", "base"]   # shoulder and elbow are untested, so chat can't move them yet
+CHAT_JOINTS = ["claw", "base", "shoulder", "elbow"]   # all four have limits checked on the arm
 
 GEORGE_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
 # The Flash engine is quicker and uses half as much of the free ElevenLabs allowance.
@@ -78,8 +79,7 @@ LIVE INFORMATION: use web_search whenever the answer depends on the current stat
 ARM_RULES = f"""ROBOT ARM: you control the user's 3D-printed robot arm (an EEZYbotARM Mk2) with arm tools.
 - Only use an arm tool when the user's latest message asks for movement. Never move the arm on your own initiative or to demonstrate.
 - Routines: {", ".join(MOVES)}. "clap" opens and closes the claw five times; "victory_dance" claps three times and swings the base; "wave" and "base_sweep" swing the base; "claw_wiggle" is a small claw test. "nod" and "bounce" tip the shoulder; "stretch", "big_wave", "pick_up", "put_down", "salute", "look_around", "wake_up", "dance" and "reach" use the shoulder with the claw or base. The rest do what their names say, using only the claw and base. If asked to move the claw and base without angles, run victory_dance.
-- move_joint sets one joint to an angle: {_limits()}. Angles outside these are refused. To move both, call move_joint twice in the same turn. Nobody has confirmed which claw angle is open and which is closed.
-- You can't move the shoulder or elbow to an angle yet (only the nod routine uses the shoulder). Say so if asked.
+- move_joint sets one joint to an angle: {_limits()}. Angles outside these are refused. To move several joints, call move_joint once per joint in the same turn. Nobody has confirmed which claw angle is open and which is closed. The shoulder tips the arm forward and back, and the elbow raises and lowers the forearm; both move slowly.
 - If the user says stop, use stop_arm at once. Stop relaxes all servos.
 - Arm moves start the moment your reply begins playing, so talk as if it's happening now ("Clapping now, sir.").
 - You can't see the arm and the servos give no feedback. A tool result only means the command was sent: say it was sent and ask the user to watch, never that it definitely moved. If they say nothing happened, suggest checking the arm's 6V servo power.
@@ -101,7 +101,7 @@ TEXT = {"type": "string"}
 TOOLS = [
     _strict("run_routine", "Run one saved arm routine. Only when the user's latest message asks for movement.",
             {"routine": {"type": "string", "enum": list(MOVES)}}, ["routine"]),
-    _strict("move_joint", "Move one joint to an angle in degrees. It holds there for 10 seconds, then relaxes. Only when the user's latest message asks for movement.",
+    _strict("move_joint", "Move one joint to an angle in degrees. The claw and base hold for 10 seconds, then relax; the shoulder and elbow hold until stop_arm. Only when the user's latest message asks for movement.",
             {"joint": {"type": "string", "enum": CHAT_JOINTS}, "angle": {"type": "integer"}}, ["joint", "angle"]),
     _strict("stop_arm", "Stop any arm movement immediately and relax all servos.", {}, []),
     _strict("arm_status", "Check whether a routine is running and the last angle sent to each joint.", {}, []),
@@ -257,13 +257,13 @@ class Chat:
             if name == "move_joint":
                 joint, angle = args.get("joint"), args.get("angle")
                 if joint not in CHAT_JOINTS:
-                    return f"{joint} can't be moved from chat yet because it hasn't been tested.", True, False
+                    return f"There's no joint called {joint}.", True, False
                 if type(angle) is not int:
                     return "The angle must be a whole number.", True, False
                 check_angle(joint, angle)
                 self._check_idle()
                 self._queue(lambda: self.jarvis.set_joint(joint, angle))
-                return f"Command sent: {joint} to {angle} degrees, as your reply begins. It relaxes after 10 seconds.", False, True
+                return f"Command sent: {joint} to {angle} degrees, as your reply begins. " + ("It holds there until Stop." if joint in ("shoulder", "elbow") else "It relaxes after 10 seconds."), False, True
             if name == "stop_arm":
                 self.cancel_queued()
                 self.jarvis.stop()
@@ -361,7 +361,13 @@ class Chat:
             except anthropic.APIStatusError as problem:
                 del self.messages[saved:]
                 self.user_turns -= 1
-                raise ChatUnavailable(f"Claude returned an error ({problem.status_code}). Try again.")
+                detail = ""
+                try:
+                    detail = str(problem.body["error"]["message"])[:300]
+                except (TypeError, KeyError):
+                    pass
+                print(f"Claude error {problem.status_code}: {detail or problem}", file=sys.stderr, flush=True)
+                raise ChatUnavailable(f"Claude returned an error ({problem.status_code}). {detail} Try again.".replace("  ", " "))
         except BaseException:
             self.cancel_queued()   # no reply, so don't move the arm
             raise

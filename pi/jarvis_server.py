@@ -27,6 +27,9 @@ TAILSCALE_HOST = os.environ.get("JARVIS_TS_HOST", "the-coolest-raspberry-pi.tail
 
 DEFAULT_DELAY = 1.0
 HOLD_SECONDS = 10         # a slider or chat position relaxes after this long, so servos don't strain
+# The shoulder and elbow stay powered after a move (only Stop relaxes them). Relaxing them lets the
+# arm sag and makes the Pi forget where they are, so their next move would jump instead of gliding.
+KEEP_POWERED = {"shoulder", "elbow"}
 TESTED_JOINTS = {"claw", "base", "shoulder", "elbow"}   # the page locks any others until unlocked
 MAX_BODY_BYTES = 8192
 
@@ -90,6 +93,7 @@ class Jarvis:
                         "tested": name in TESTED_JOINTS,
                         "last_angle": self.last_angles.get(name),
                         "held": name in self.held,
+                        "keep_powered": name in KEEP_POWERED,
                     }
                     for name, (channel, low, high) in JOINTS.items()
                 ],
@@ -128,7 +132,10 @@ class Jarvis:
             with self.lock:
                 try:
                     for joint in used:
-                        self._release(joint)
+                        if joint in KEEP_POWERED:
+                            self.held[joint] = time.monotonic()
+                        else:
+                            self._release(joint)
                 except HardwareError:
                     pass
                 self.running = None
@@ -158,7 +165,7 @@ class Jarvis:
         with self.lock:
             now = time.monotonic()
             for joint, since in list(self.held.items()):
-                if now - since >= HOLD_SECONDS:
+                if joint not in KEEP_POWERED and now - since >= HOLD_SECONDS:
                     try:
                         self._release(joint)
                     except HardwareError:
