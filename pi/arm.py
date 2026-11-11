@@ -24,10 +24,16 @@ MAX_PULSE_US = 2500
 
 # Smooth motion: a joint glides to its new position in small steps instead of jumping.
 # 30 microseconds is about 3 degrees, so a full 180-degree sweep takes about 0.6 seconds.
+# The shoulder and elbow glide slower, the same speed up and down.
 # The first move after a joint has been relaxed still jumps, because its position isn't known.
 GLIDE_STEP_US = 30
-GLIDE_STEP_US_BY_JOINT = {"shoulder": 15}   # the shoulder glides at half speed
+GLIDE_STEP_US_BY_JOINT = {"elbow": 15, "shoulder": 8}
 GLIDE_STEP_SECONDS = 0.01
+
+# The shoulder and elbow remember their last pulse in PULSE_FILE, so the next script
+# glides from there instead of jumping.
+REMEMBERED_JOINTS = {"shoulder", "elbow"}
+PULSE_FILE = "/tmp/arm_pulses.json"
 
 
 def check_pulse(us):
@@ -57,7 +63,23 @@ class Arm:
         self.bus.write_byte_data(ADDR, 0x00, 0x20)   # wake up
         time.sleep(0.01)
         self.bus.write_byte_data(ADDR, 0x00, 0xA0)   # restart
-        self.pulse_now = {}   # last pulse sent to each joint that is still powered
+        self.pulse_now = self._load_pulses()   # last pulse sent to each joint that is still powered
+
+    def _load_pulses(self):
+        import json
+        try:
+            with open(PULSE_FILE) as f:
+                return {j: float(us) for j, us in json.load(f).items() if j in REMEMBERED_JOINTS}
+        except (OSError, ValueError, AttributeError):
+            return {}
+
+    def _save_pulses(self):
+        import json
+        try:
+            with open(PULSE_FILE, "w") as f:
+                json.dump({j: us for j, us in self.pulse_now.items() if j in REMEMBERED_JOINTS}, f)
+        except OSError:
+            pass
 
     def _write_pulse(self, joint, us):
         channel = JOINTS[joint][0]
@@ -79,6 +101,7 @@ class Arm:
                 time.sleep(GLIDE_STEP_SECONDS)
         self._write_pulse(joint, target_us)
         self.pulse_now[joint] = target_us
+        self._save_pulses()
 
     def move(self, joint, angle):
         check_angle(joint, angle)
@@ -97,3 +120,4 @@ class Arm:
         reg = 0x06 + 4 * channel
         self.bus.write_i2c_block_data(ADDR, reg, [0, 0, 0, 0x10])   # power off
         self.pulse_now.pop(joint, None)
+        self._save_pulses()
